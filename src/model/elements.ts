@@ -114,13 +114,7 @@ export interface DiagramEdge {
   thick: number | null;
 }
 
-export interface ClassDefinition {
-  readonly name: string;
-  readonly attributes: Readonly<Record<string, string>>;
-}
-
 export interface Diagram extends NodeGroup {
-  classes: Record<string, ClassDefinition>;
   shadowStyle: ShadowStyle;
   linecolor: Color;
   nodeWidth: number | null;
