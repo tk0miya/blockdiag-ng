@@ -15,3 +15,10 @@ updates:
       # Remove an entry when it enters LTS; add the next April release as it approaches.
       - dependency-name: "@types/node"
         versions: ["25.x", "26.x", "27.x", "28.x"]
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      timezone: "Asia/Tokyo"
+    cooldown:
+      default-days: 7
