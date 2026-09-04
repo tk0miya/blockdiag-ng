@@ -1,0 +1,3 @@
+[submodule "vendor/blockdiag"]
+	path = vendor/blockdiag
+	url = https://github.com/blockdiag/blockdiag.git
