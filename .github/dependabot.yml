@@ -1,0 +1,17 @@
+# Please see the documentation for all configuration options:
+# https://docs.github.com/github/administering-a-repository/configuration-options-for-dependency-updates
+
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      timezone: "Asia/Tokyo"
+    cooldown:
+      default-days: 7
+    ignore:
+      # Hold Node.js releases until LTS promotion (October each year).
+      # Remove an entry when it enters LTS; add the next April release as it approaches.
+      - dependency-name: "@types/node"
+        versions: ["25.x", "26.x", "27.x", "28.x"]
