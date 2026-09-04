@@ -44,7 +44,9 @@ export type EdgeLayout = "normal" | "flowchart";
 
 export interface DiagramNode {
   readonly id: string;
-  label: string;
+  // Defaults to the element's id, but can become null: a bare "label"
+  // attribute with no value (e.g. "A [label];") assigns it directly.
+  label: string | null;
   xy: XY;
   colwidth: number;
   colheight: number;
@@ -71,7 +73,9 @@ export interface DiagramNode {
 
 export interface NodeGroup {
   readonly id: string;
-  label: string;
+  // Can become null: a bare "label" attribute with no value (e.g.
+  // "group A [label];") assigns it directly.
+  label: string | null;
   xy: XY;
   colwidth: number;
   colheight: number;
