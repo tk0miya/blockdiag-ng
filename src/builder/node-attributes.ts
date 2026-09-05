@@ -60,7 +60,7 @@ function isNodeAttrName(name: string): name is NodeAttrName {
   return NODE_ATTR_NAME_SET.has(name);
 }
 
-function parseLabelOrientation(value: string): LabelOrientation {
+export function parseLabelOrientation(value: string): LabelOrientation {
   const normalized = value.toLowerCase();
   if (normalized !== "horizontal" && normalized !== "vertical") {
     throw new AttributeError(`unknown label orientation: ${value}`);
