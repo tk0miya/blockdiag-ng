@@ -33,4 +33,13 @@ describe("unquote", () => {
   it("preserves embedded newlines", () => {
     expect(unquote('"multi\nline"')).toBe("multi\nline");
   });
+
+  it("leaves an unrelated triple-quote-like run in the middle of the value alone", () => {
+    expect(unquote("\"abc'''def\"")).toBe("abc'''def");
+    expect(unquote('"foo"""bar"')).toBe('foo"""bar');
+  });
+
+  it("also strips a single/double quote layer left over after stripping triple quotes", () => {
+    expect(unquote('"""\'hello\'"""')).toBe("hello");
+  });
 });

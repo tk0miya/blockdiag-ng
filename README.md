@@ -22,3 +22,18 @@ git clone --recurse-submodules <this-repo-url>
 # or, in an existing checkout:
 git submodule update --init --recursive
 ```
+
+### Differences from the original
+
+blockdiag-ng aims for input/output compatibility with the original, but
+deliberately diverges from it in a few places - usually because the
+original's behavior turned out to be an implementation bug rather than
+an intentional design choice. Divergences are documented next to the
+code that makes them; this list is a summary.
+
+- **A triple-quoted attribute value's content is no longer corrupted by
+  an unrelated triple-quote-like run in its middle**
+  (`src/builder/unquote.ts`). For example, a double-quoted value whose
+  content happens to contain three single quotes in a row - e.g.
+  `"abc'''def"` - keeps that inner `'''` intact here; the original loses
+  it, returning `abcdef` instead of `abc'''def`.
