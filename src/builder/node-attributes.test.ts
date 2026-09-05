@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { DiagramNode } from "../model/elements.js";
 import type { Attr } from "../parser/ast.js";
-import { AttributeError, applyAttributes, type ClassRegistry } from "./attributes.js";
-import { nodeAttributeSchema } from "./node-attributes.js";
+import { AttributeError, type ClassRegistry } from "./attributes.js";
+import { applyNodeAttributes } from "./node-attributes.js";
 
 // Expected outputs were captured by running the original implementation's
 // DiagramNode.set_attributes() (vendor/blockdiag/src/blockdiag/elements.py)
@@ -43,10 +43,10 @@ function attr(name: string, value: string | null): Attr {
   return { type: "Attr", name, value };
 }
 
-describe("nodeAttributeSchema", () => {
+describe("applyNodeAttributes", () => {
   it("applies plain string attributes as-is", () => {
     const node = newNode();
-    applyAttributes(
+    applyNodeAttributes(
       node,
       [
         attr("label", '"hello"'),
@@ -57,7 +57,6 @@ describe("nodeAttributeSchema", () => {
         attr("icon", '"icon.png"'),
         attr("background", '"bg.png"'),
       ],
-      nodeAttributeSchema,
       noClasses,
     );
     expect(node.label).toBe("hello");
@@ -75,7 +74,7 @@ describe("nodeAttributeSchema", () => {
     // never checks the value is present - so e.g. "A [label];" with no
     // "= ..." assigns null rather than erroring.
     const node = newNode();
-    applyAttributes(node, [attr("label", null)], nodeAttributeSchema, noClasses);
+    applyNodeAttributes(node, [attr("label", null)], noClasses);
     expect(node.label).toBeNull();
   });
 
@@ -90,7 +89,8 @@ describe("nodeAttributeSchema", () => {
     // AttributeError, the int_attrs (colwidth/colheight/width/height/
     // fontsize/rotate) all raise TypeError from int(None), and icon/
     // background raise TypeError from the os.path.isfile(None) fallback
-    // (see the schema's comment on why this port validates them at all).
+    // (see node-attributes.ts's icon/background comment on why this port
+    // validates them at all).
     // requireValue() here isn't a behavior change - it just fails
     // earlier and uniformly, as AttributeError instead of whatever
     // incidental exception the original would raise.
@@ -110,15 +110,13 @@ describe("nodeAttributeSchema", () => {
       "icon",
       "background",
     ]) {
-      expect(() => applyAttributes(newNode(), [attr(name, null)], nodeAttributeSchema, noClasses), name).toThrowError(
-        AttributeError,
-      );
+      expect(() => applyNodeAttributes(newNode(), [attr(name, null)], noClasses), name).toThrowError(AttributeError);
     }
   });
 
   it("coerces int attributes like Python's int(), rejecting non-integer values", () => {
     const node = newNode();
-    applyAttributes(
+    applyNodeAttributes(
       node,
       [
         attr("colwidth", "2"),
@@ -128,7 +126,6 @@ describe("nodeAttributeSchema", () => {
         attr("fontsize", "16"),
         attr("rotate", "90"),
       ],
-      nodeAttributeSchema,
       noClasses,
     );
     expect(node.colwidth).toBe(2);
@@ -138,17 +135,14 @@ describe("nodeAttributeSchema", () => {
     expect(node.fontsize).toBe(16);
     expect(node.rotate).toBe(90);
 
-    expect(() => applyAttributes(newNode(), [attr("rotate", "90.5")], nodeAttributeSchema, noClasses)).toThrowError(
-      AttributeError,
-    );
+    expect(() => applyNodeAttributes(newNode(), [attr("rotate", "90.5")], noClasses)).toThrowError(AttributeError);
   });
 
   it("resolves color attributes through parseColor", () => {
     const node = newNode();
-    applyAttributes(
+    applyNodeAttributes(
       node,
       [attr("color", "red"), attr("textcolor", "blue"), attr("linecolor", "#00ff00")],
-      nodeAttributeSchema,
       noClasses,
     );
     expect(node.color).toEqual([255, 0, 0]);
@@ -158,20 +152,16 @@ describe("nodeAttributeSchema", () => {
 
   it("validates and lowercases the style attribute", () => {
     const node = newNode();
-    applyAttributes(node, [attr("style", "dashed")], nodeAttributeSchema, noClasses);
+    applyNodeAttributes(node, [attr("style", "dashed")], noClasses);
     expect(node.style).toBe("dashed");
-    expect(() => applyAttributes(newNode(), [attr("style", "bogus")], nodeAttributeSchema, noClasses)).toThrowError(
-      AttributeError,
-    );
+    expect(() => applyNodeAttributes(newNode(), [attr("style", "bogus")], noClasses)).toThrowError(AttributeError);
   });
 
   it("validates the shape attribute against the known shape list", () => {
     const node = newNode();
-    applyAttributes(node, [attr("shape", "circle")], nodeAttributeSchema, noClasses);
+    applyNodeAttributes(node, [attr("shape", "circle")], noClasses);
     expect(node.shape).toBe("circle");
-    expect(() => applyAttributes(newNode(), [attr("shape", "hexagon")], nodeAttributeSchema, noClasses)).toThrowError(
-      AttributeError,
-    );
+    expect(() => applyNodeAttributes(newNode(), [attr("shape", "hexagon")], noClasses)).toThrowError(AttributeError);
   });
 
   it("accepts the namespaced flowchart.* shapes", () => {
@@ -180,23 +170,23 @@ describe("nodeAttributeSchema", () => {
     // filename alone - confirmed against vendor/blockdiag/setup.py's
     // [blockdiag_noderenderer] entry points.
     const node = newNode();
-    applyAttributes(node, [attr("shape", "flowchart.database")], nodeAttributeSchema, noClasses);
+    applyNodeAttributes(node, [attr("shape", "flowchart.database")], noClasses);
     expect(node.shape).toBe("flowchart.database");
   });
 
   it("sets stacked to true regardless of the attribute's value", () => {
     const node = newNode();
-    applyAttributes(node, [attr("stacked", null)], nodeAttributeSchema, noClasses);
+    applyNodeAttributes(node, [attr("stacked", null)], noClasses);
     expect(node.stacked).toBe(true);
   });
 
   it("validates and lowercases label_orientation", () => {
     const node = newNode();
-    applyAttributes(node, [attr("label_orientation", "VERTICAL")], nodeAttributeSchema, noClasses);
+    applyNodeAttributes(node, [attr("label_orientation", "VERTICAL")], noClasses);
     expect(node.labelOrientation).toBe("vertical");
-    expect(() =>
-      applyAttributes(newNode(), [attr("label_orientation", "sideways")], nodeAttributeSchema, noClasses),
-    ).toThrowError(AttributeError);
+    expect(() => applyNodeAttributes(newNode(), [attr("label_orientation", "sideways")], noClasses)).toThrowError(
+      AttributeError,
+    );
   });
 
   it("expands a class attribute into the class's own attributes, in order", () => {
@@ -204,21 +194,19 @@ describe("nodeAttributeSchema", () => {
       get: (name) => (name === "emphasis" ? [attr("color", "red"), attr("style", "dashed")] : undefined),
     };
     const node = newNode();
-    applyAttributes(node, [attr("class", "emphasis"), attr("label", '"hi"')], nodeAttributeSchema, classes);
+    applyNodeAttributes(node, [attr("class", "emphasis"), attr("label", '"hi"')], classes);
     expect(node.color).toEqual([255, 0, 0]);
     expect(node.style).toBe("dashed");
     expect(node.label).toBe("hi");
   });
 
   it("throws AttributeError for an unknown class", () => {
-    expect(() => applyAttributes(newNode(), [attr("class", "unknown")], nodeAttributeSchema, noClasses)).toThrowError(
-      AttributeError,
-    );
+    expect(() => applyNodeAttributes(newNode(), [attr("class", "unknown")], noClasses)).toThrowError(AttributeError);
   });
 
   it("throws AttributeError for an unknown attribute name", () => {
-    expect(() =>
-      applyAttributes(newNode(), [attr("nonexistent", "value")], nodeAttributeSchema, noClasses),
-    ).toThrowError(AttributeError);
+    expect(() => applyNodeAttributes(newNode(), [attr("nonexistent", "value")], noClasses)).toThrowError(
+      AttributeError,
+    );
   });
 });

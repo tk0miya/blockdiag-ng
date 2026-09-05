@@ -3,33 +3,25 @@
 // Ported from the original implementation's `Base.set_attribute()`
 // (vendor/blockdiag/src/blockdiag/elements.py), which dynamically
 // dispatches each attribute name to a `set_<name>` method, an int
-// coercion, or a plain field assignment. TypeScript can't dispatch on a
-// dynamic attribute name against arbitrary object fields while staying
-// type-safe, so each element kind instead provides an explicit
-// AttributeSchema mapping every attribute name (including plain
-// assignments and int coercions) to a setter function.
+// coercion, or a plain field assignment. What's ported is that behavior -
+// which names are accepted and what each one does - not the dispatch
+// mechanism itself: each element kind instead switches on the attribute
+// name directly (see node-attributes.ts etc.), which TypeScript can check
+// for exhaustiveness at compile time (see assertNever below), unlike the
+// original's runtime `hasattr`/`getattr` lookup.
 //
-// `class` is handled here rather than per-schema, exactly like the
-// original: it isn't itself a field, but replays another set of
-// attributes - resolved through a ClassRegistry - as if they were written
-// inline. In the original, that registry is `Diagram.classes`, a
+// `class` is handled by each element kind's own applyXAttribute, checked
+// before the switch rather than as one of its cases: it isn't itself a
+// field, but replays another set of attributes - resolved through a
+// ClassRegistry - as if they were written inline, exactly like the
+// original. In the original, that registry is `Diagram.classes`, a
 // per-build class variable read only while resolving a `class` attribute
 // (see the note on classes removed from src/model/elements.ts); here it's
 // passed in explicitly instead of living on the domain model.
 
 import type { Attr } from "../parser/ast.js";
-import { unquote } from "./unquote.js";
 
 export class AttributeError extends Error {}
-
-// A setter's value is nullable because a bare attribute name with no "="
-// (e.g. "stacked" in "A [stacked];") is valid DSL and reaches the setter
-// as null - most setters require a value and should call requireValue(),
-// but some (like "stacked") ignore it entirely, exactly like the
-// original's corresponding `set_<name>` methods.
-export type AttributeSetter<T> = (target: T, value: string | null) => void;
-
-export type AttributeSchema<T> = Readonly<Record<string, AttributeSetter<T>>>;
 
 export interface ClassRegistry {
   get(name: string): readonly Attr[] | undefined;
@@ -42,37 +34,14 @@ export function requireValue(name: string, value: string | null): string {
   return value;
 }
 
-export function applyAttribute<T>(target: T, attr: Attr, schema: AttributeSchema<T>, classes: ClassRegistry): void {
-  const value = unquote(attr.value);
-
-  if (attr.name === "class") {
-    const className = requireValue("class", value);
-    const classAttrs = classes.get(className);
-    if (classAttrs === undefined) {
-      throw new AttributeError(`Unknown class: ${className}`);
-    }
-    for (const classAttr of classAttrs) {
-      applyAttribute(target, classAttr, schema, classes);
-    }
-    return;
+// Looks up a `class` attribute's referenced attribute list, for the
+// caller to replay through its own switch.
+export function resolveClass(classes: ClassRegistry, className: string): readonly Attr[] {
+  const attrs = classes.get(className);
+  if (attrs === undefined) {
+    throw new AttributeError(`Unknown class: ${className}`);
   }
-
-  const setter = schema[attr.name];
-  if (setter === undefined) {
-    throw new AttributeError(`Unknown attribute: ${attr.name}`);
-  }
-  setter(target, value);
-}
-
-export function applyAttributes<T>(
-  target: T,
-  attrs: readonly Attr[],
-  schema: AttributeSchema<T>,
-  classes: ClassRegistry,
-): void {
-  for (const attr of attrs) {
-    applyAttribute(target, attr, schema, classes);
-  }
+  return attrs;
 }
 
 // Ported from Python's int(str): unlike Number.parseInt, it rejects
@@ -84,4 +53,15 @@ export function parseIntAttr(value: string): number {
     throw new AttributeError(`invalid literal for int() with base 10: ${JSON.stringify(value)}`);
   }
   return Number.parseInt(trimmed, 10);
+}
+
+// TypeScript's compile-time exhaustiveness check: each element kind's
+// switch is over a literal union of its own known attribute names (e.g.
+// NodeAttrName), so a `default` case that forwards the switched value
+// here only type-checks while every union member is still handled by an
+// explicit `case` - adding a new attribute name to the union without
+// adding its `case` breaks the build here instead of failing silently at
+// runtime.
+export function assertNever(value: never): never {
+  throw new Error(`unreachable: unhandled case ${JSON.stringify(value)}`);
 }
