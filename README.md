@@ -37,3 +37,8 @@ code that makes them; this list is a summary.
   content happens to contain three single quotes in a row - e.g.
   `"abc'''def"` - keeps that inner `'''` intact here; the original loses
   it, returning `abcdef` instead of `abc'''def`.
+
+- **A quoted `group` attribute referring to a node's own enclosing group
+  no longer crashes** (`src/builder/tree-builder.ts`). For example,
+  `group G { A [group = "G"]; }` recognizes `"G"` as the same group `A`
+  is already in; the original crashes on this input instead.
