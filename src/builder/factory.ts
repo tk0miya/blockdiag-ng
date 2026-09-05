@@ -169,7 +169,7 @@ export function createEdge(node1: DiagramNode, node2: DiagramNode, defaults: Edg
 
 // Diagram is a NodeGroup subclass in the original (it's always the
 // single root container, so - unlike ordinary nodes/groups/edges - it
-// never goes through the id-keyed Namespace), and inherits NodeGroup's
+// never goes through id-based dedup), and inherits NodeGroup's
 // class-level defaults rather than Base's: its initial color is the same
 // orange as an ordinary group's, confirmed by inspecting a fresh
 // Diagram() instance. Takes GroupDefaults (rather than hardcoding the
