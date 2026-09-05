@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DiagramNode, NodeGroup } from "../model/elements.js";
-import { assignToGroup, BuildError } from "./belong-to.js";
+import { assignToGroup, BuildError } from "./assign-to-group.js";
 
 // Expected outputs were captured by running the original implementation's
 // DiagramTreeBuilder.belong_to() (vendor/blockdiag/src/blockdiag/builder.py)
