@@ -1,7 +1,7 @@
 // Ported from the original implementation's NodeGroup attribute handling
 // (vendor/blockdiag/src/blockdiag/elements.py: Base, Element, NodeGroup).
-// See attributes.ts for why this is an explicit schema rather than
-// dynamic dispatch.
+// See attributes.ts for why this switches on the attribute name directly
+// rather than mirroring the original's dynamic dispatch.
 //
 // `thick` deliberately diverges from the original: NodeGroup.thick isn't
 // in Base.int_attrs and has no dedicated setter, so in the original it
@@ -17,10 +17,48 @@
 // rejects it as an AttributeError, same as every other int-coerced
 // attribute here.
 import type { GroupOrientation, GroupShape, NodeGroup } from "../model/elements.js";
-import type { AttributeSchema } from "./attributes.js";
-import { AttributeError, parseIntAttr, requireValue } from "./attributes.js";
+import type { Attr } from "../parser/ast.js";
+import {
+  AttributeError,
+  assertNever,
+  type ClassRegistry,
+  parseIntAttr,
+  requireValue,
+  resolveClass,
+} from "./attributes.js";
 import { parseColor } from "./color.js";
 import { parseLineStyle } from "./line-style.js";
+import { unquote } from "./unquote.js";
+
+// The single source of truth for which attribute names this element kind
+// accepts: GroupAttrName is derived from this array (rather than written
+// out separately as its own union), so there's only one list to keep in
+// sync with the switch below.
+const GROUP_ATTR_NAMES = [
+  "label",
+  "fontfamily",
+  "icon",
+  "href",
+  "fontsize",
+  "colwidth",
+  "colheight",
+  "width",
+  "height",
+  "thick",
+  "color",
+  "textcolor",
+  "style",
+  "shape",
+  "orientation",
+] as const;
+
+type GroupAttrName = (typeof GROUP_ATTR_NAMES)[number];
+
+const GROUP_ATTR_NAME_SET: ReadonlySet<string> = new Set(GROUP_ATTR_NAMES);
+
+function isGroupAttrName(name: string): name is GroupAttrName {
+  return GROUP_ATTR_NAME_SET.has(name);
+}
 
 function parseGroupShape(value: string): GroupShape {
   const normalized = value.toLowerCase();
@@ -38,52 +76,75 @@ function parseGroupOrientation(value: string): GroupOrientation {
   return normalized;
 }
 
-export const groupAttributeSchema: AttributeSchema<NodeGroup> = {
-  // These have no `set_<name>` in the original, so a bare attribute with
-  // no value assigns null rather than erroring.
-  label: (t, v) => {
-    t.label = v;
-  },
-  fontfamily: (t, v) => {
-    t.fontfamily = v;
-  },
-  icon: (t, v) => {
-    t.icon = v;
-  },
-  href: (t, v) => {
-    t.href = v;
-  },
-  fontsize: (t, v) => {
-    t.fontsize = parseIntAttr(requireValue("fontsize", v));
-  },
-  colwidth: (t, v) => {
-    t.colwidth = parseIntAttr(requireValue("colwidth", v));
-  },
-  colheight: (t, v) => {
-    t.colheight = parseIntAttr(requireValue("colheight", v));
-  },
-  width: (t, v) => {
-    t.width = parseIntAttr(requireValue("width", v));
-  },
-  height: (t, v) => {
-    t.height = parseIntAttr(requireValue("height", v));
-  },
-  thick: (t, v) => {
-    t.thick = parseIntAttr(requireValue("thick", v));
-  },
-  color: (t, v) => {
-    t.color = parseColor(requireValue("color", v));
-  },
-  textcolor: (t, v) => {
-    t.textcolor = parseColor(requireValue("textcolor", v));
-  },
-  style: (t, v) => {
-    t.style = parseLineStyle(requireValue("style", v));
-  },
-  shape: (t, v) => {
-    t.shape = parseGroupShape(requireValue("shape", v));
-  },
-  orientation: (t, v) => {
-    t.orientation = parseGroupOrientation(requireValue("orientation", v));
-  },
-};
+export function applyGroupAttribute(target: NodeGroup, attr: Attr, classes: ClassRegistry): void {
+  const value = unquote(attr.value);
+
+  if (attr.name === "class") {
+    for (const classAttr of resolveClass(classes, requireValue("class", value))) {
+      applyGroupAttribute(target, classAttr, classes);
+    }
+    return;
+  }
+
+  if (!isGroupAttrName(attr.name)) {
+    throw new AttributeError(`Unknown attribute: ${attr.name}`);
+  }
+
+  switch (attr.name) {
+    // These have no `set_<name>` in the original, so a bare attribute with
+    // no value assigns null rather than erroring.
+    case "label":
+      target.label = value;
+      return;
+    case "fontfamily":
+      target.fontfamily = value;
+      return;
+    case "icon":
+      target.icon = value;
+      return;
+    case "href":
+      target.href = value;
+      return;
+    case "fontsize":
+      target.fontsize = parseIntAttr(requireValue("fontsize", value));
+      return;
+    case "colwidth":
+      target.colwidth = parseIntAttr(requireValue("colwidth", value));
+      return;
+    case "colheight":
+      target.colheight = parseIntAttr(requireValue("colheight", value));
+      return;
+    case "width":
+      target.width = parseIntAttr(requireValue("width", value));
+      return;
+    case "height":
+      target.height = parseIntAttr(requireValue("height", value));
+      return;
+    case "thick":
+      target.thick = parseIntAttr(requireValue("thick", value));
+      return;
+    case "color":
+      target.color = parseColor(requireValue("color", value));
+      return;
+    case "textcolor":
+      target.textcolor = parseColor(requireValue("textcolor", value));
+      return;
+    case "style":
+      target.style = parseLineStyle(requireValue("style", value));
+      return;
+    case "shape":
+      target.shape = parseGroupShape(requireValue("shape", value));
+      return;
+    case "orientation":
+      target.orientation = parseGroupOrientation(requireValue("orientation", value));
+      return;
+    default:
+      assertNever(attr.name);
+  }
+}
+
+export function applyGroupAttributes(target: NodeGroup, attrs: readonly Attr[], classes: ClassRegistry): void {
+  for (const attr of attrs) {
+    applyGroupAttribute(target, attr, classes);
+  }
+}
