@@ -56,7 +56,7 @@ const EDGE_DIRECTIONS: ReadonlySet<string> = new Set(["back", "both", "none", "f
 // Ported from the original's `set_dir()`: accepts the four direction
 // names directly, or one of the arrow-shaped operator tokens, some of
 // which also imply an hstyle.
-function setDir(target: DiagramEdge, rawValue: string): void {
+export function setDir(target: DiagramEdge, rawValue: string): void {
   const value = rawValue.toLowerCase();
   if (EDGE_DIRECTIONS.has(value)) {
     target.dir = value as EdgeDirection;
