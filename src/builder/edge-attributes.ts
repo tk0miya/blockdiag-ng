@@ -1,7 +1,7 @@
 // Ported from the original implementation's DiagramEdge attribute
 // handling (vendor/blockdiag/src/blockdiag/elements.py: Base,
-// DiagramEdge). See attributes.ts for why this is an explicit schema
-// rather than dynamic dispatch.
+// DiagramEdge). See attributes.ts for why this switches on the attribute
+// name directly rather than mirroring the original's dynamic dispatch.
 //
 // `colwidth`/`colheight` are deliberately NOT included, even though the
 // original's DiagramEdge inherits them via Base.int_attrs: DiagramEdge
@@ -11,10 +11,45 @@
 // attribute name here; an edge attribute list using them is rejected as
 // unknown instead.
 import type { DiagramEdge, EdgeDirection } from "../model/elements.js";
-import type { AttributeSchema } from "./attributes.js";
-import { AttributeError, parseIntAttr, requireValue } from "./attributes.js";
+import type { Attr } from "../parser/ast.js";
+import {
+  AttributeError,
+  assertNever,
+  type ClassRegistry,
+  parseIntAttr,
+  requireValue,
+  resolveClass,
+} from "./attributes.js";
 import { parseColor } from "./color.js";
 import { parseLineStyle } from "./line-style.js";
+import { unquote } from "./unquote.js";
+
+// The single source of truth for which attribute names this element kind
+// accepts: EdgeAttrName is derived from this array (rather than written
+// out separately as its own union), so there's only one list to keep in
+// sync with the switch below.
+const EDGE_ATTR_NAMES = [
+  "label",
+  "description",
+  "fontfamily",
+  "fontsize",
+  "color",
+  "textcolor",
+  "style",
+  "dir",
+  "hstyle",
+  "folded",
+  "nofolded",
+  "thick",
+] as const;
+
+type EdgeAttrName = (typeof EDGE_ATTR_NAMES)[number];
+
+const EDGE_ATTR_NAME_SET: ReadonlySet<string> = new Set(EDGE_ATTR_NAMES);
+
+function isEdgeAttrName(name: string): name is EdgeAttrName {
+  return EDGE_ATTR_NAME_SET.has(name);
+}
 
 const EDGE_DIRECTIONS: ReadonlySet<string> = new Set(["back", "both", "none", "forward"]);
 
@@ -88,54 +123,77 @@ function setHstyle(target: DiagramEdge, rawValue: string): void {
   }
 }
 
-export const edgeAttributeSchema: AttributeSchema<DiagramEdge> = {
-  // No dedicated setter in the original, so a bare "[label];"-style
-  // attribute with no value assigns null rather than erroring.
-  label: (t, v) => {
-    t.label = v;
-  },
-  description: (t, v) => {
-    t.description = v;
-  },
-  fontfamily: (t, v) => {
-    t.fontfamily = v;
-  },
-  fontsize: (t, v) => {
-    t.fontsize = parseIntAttr(requireValue("fontsize", v));
-  },
-  color: (t, v) => {
-    t.color = parseColor(requireValue("color", v));
-  },
-  // Deliberately diverges from the original here: DiagramEdge has no
-  // set_textcolor of its own (unlike DiagramNode/NodeGroup, which
-  // inherit one from Element), so in the original this attribute falls
-  // through Base.set_attribute()'s plain-assignment branch entirely
-  // unvalidated and unconverted - an edge's `textcolor` stays whatever
-  // raw string (or null) was given, never an RGB tuple. Since this port's
-  // DiagramEdge.textcolor is typed as Color, not string, following that
-  // exactly isn't an option; resolving it through parseColor like `color`
-  // is the closest type-safe equivalent.
-  textcolor: (t, v) => {
-    t.textcolor = parseColor(requireValue("textcolor", v));
-  },
-  style: (t, v) => {
-    t.style = parseLineStyle(requireValue("style", v));
-  },
-  dir: (t, v) => {
-    setDir(t, requireValue("dir", v));
-  },
-  hstyle: (t, v) => {
-    setHstyle(t, requireValue("hstyle", v));
-  },
-  // These three ignore the attribute's value entirely, matching the
-  // original's set_folded/set_nofolded/set_thick.
-  folded: (t) => {
-    t.folded = true;
-  },
-  nofolded: (t) => {
-    t.folded = false;
-  },
-  thick: (t) => {
-    t.thick = 3;
-  },
-};
+export function applyEdgeAttribute(target: DiagramEdge, attr: Attr, classes: ClassRegistry): void {
+  const value = unquote(attr.value);
+
+  if (attr.name === "class") {
+    for (const classAttr of resolveClass(classes, requireValue("class", value))) {
+      applyEdgeAttribute(target, classAttr, classes);
+    }
+    return;
+  }
+
+  if (!isEdgeAttrName(attr.name)) {
+    throw new AttributeError(`Unknown attribute: ${attr.name}`);
+  }
+
+  switch (attr.name) {
+    // No dedicated setter in the original, so a bare "[label];"-style
+    // attribute with no value assigns null rather than erroring.
+    case "label":
+      target.label = value;
+      return;
+    case "description":
+      target.description = value;
+      return;
+    case "fontfamily":
+      target.fontfamily = value;
+      return;
+    case "fontsize":
+      target.fontsize = parseIntAttr(requireValue("fontsize", value));
+      return;
+    case "color":
+      target.color = parseColor(requireValue("color", value));
+      return;
+    // Deliberately diverges from the original here: DiagramEdge has no
+    // set_textcolor of its own (unlike DiagramNode/NodeGroup, which
+    // inherit one from Element), so in the original this attribute falls
+    // through Base.set_attribute()'s plain-assignment branch entirely
+    // unvalidated and unconverted - an edge's `textcolor` stays whatever
+    // raw string (or null) was given, never an RGB tuple. Since this port's
+    // DiagramEdge.textcolor is typed as Color, not string, following that
+    // exactly isn't an option; resolving it through parseColor like `color`
+    // is the closest type-safe equivalent.
+    case "textcolor":
+      target.textcolor = parseColor(requireValue("textcolor", value));
+      return;
+    case "style":
+      target.style = parseLineStyle(requireValue("style", value));
+      return;
+    case "dir":
+      setDir(target, requireValue("dir", value));
+      return;
+    case "hstyle":
+      setHstyle(target, requireValue("hstyle", value));
+      return;
+    // These three ignore the attribute's value entirely, matching the
+    // original's set_folded/set_nofolded/set_thick.
+    case "folded":
+      target.folded = true;
+      return;
+    case "nofolded":
+      target.folded = false;
+      return;
+    case "thick":
+      target.thick = 3;
+      return;
+    default:
+      assertNever(attr.name);
+  }
+}
+
+export function applyEdgeAttributes(target: DiagramEdge, attrs: readonly Attr[], classes: ClassRegistry): void {
+  for (const attr of attrs) {
+    applyEdgeAttribute(target, attr, classes);
+  }
+}

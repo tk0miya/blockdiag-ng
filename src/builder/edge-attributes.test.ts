@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { DiagramEdge, DiagramNode } from "../model/elements.js";
 import type { Attr } from "../parser/ast.js";
-import { AttributeError, applyAttributes, type ClassRegistry } from "./attributes.js";
-import { edgeAttributeSchema } from "./edge-attributes.js";
+import { AttributeError, type ClassRegistry } from "./attributes.js";
+import { applyEdgeAttributes } from "./edge-attributes.js";
 
 // Expected outputs were captured by running the original implementation's
 // DiagramEdge.set_attributes() (vendor/blockdiag/src/blockdiag/elements.py)
@@ -63,10 +63,10 @@ function attr(name: string, value: string | null): Attr {
   return { type: "Attr", name, value };
 }
 
-describe("edgeAttributeSchema", () => {
+describe("applyEdgeAttributes", () => {
   it("applies plain string/int/color attributes", () => {
     const edge = newEdge();
-    applyAttributes(
+    applyEdgeAttributes(
       edge,
       [
         attr("label", '"edge label"'),
@@ -77,7 +77,6 @@ describe("edgeAttributeSchema", () => {
         attr("textcolor", "blue"),
         attr("style", "dashed"),
       ],
-      edgeAttributeSchema,
       noClasses,
     );
     expect(edge.label).toBe("edge label");
@@ -91,29 +90,28 @@ describe("edgeAttributeSchema", () => {
 
   it("assigns null for a bare attribute with no value, since these have no dedicated setter", () => {
     const edge = newEdge();
-    applyAttributes(edge, [attr("label", null)], edgeAttributeSchema, noClasses);
+    applyEdgeAttributes(edge, [attr("label", null)], noClasses);
     expect(edge.label).toBeNull();
   });
 
   it("throws AttributeError for color/textcolor/style with no value", () => {
     // Unlike the original, where an edge's textcolor is never validated
-    // at all (see the schema's comment) - this port resolves it through
-    // parseColor like `color`, so a missing value fails the same way.
+    // at all (see edge-attributes.ts's textcolor comment) - this port
+    // resolves it through parseColor like `color`, so a missing value
+    // fails the same way.
     for (const name of ["color", "textcolor", "style"]) {
-      expect(() => applyAttributes(newEdge(), [attr(name, null)], edgeAttributeSchema, noClasses), name).toThrowError(
-        AttributeError,
-      );
+      expect(() => applyEdgeAttributes(newEdge(), [attr(name, null)], noClasses), name).toThrowError(AttributeError);
     }
   });
 
   it("sets dir from a direction name or an arrow-shaped operator token, some of which imply an hstyle", () => {
     const named = newEdge();
-    applyAttributes(named, [attr("dir", "back")], edgeAttributeSchema, noClasses);
+    applyEdgeAttributes(named, [attr("dir", "back")], noClasses);
     expect(named.dir).toBe("back");
     expect(named.hstyle).toBeNull();
 
     const plainArrow = newEdge();
-    applyAttributes(plainArrow, [attr("dir", "->")], edgeAttributeSchema, noClasses);
+    applyEdgeAttributes(plainArrow, [attr("dir", "->")], noClasses);
     expect(plainArrow.dir).toBe("forward");
     expect(plainArrow.hstyle).toBeNull();
 
@@ -124,13 +122,13 @@ describe("edgeAttributeSchema", () => {
       ["--", "none"],
     ] as const) {
       const edge = newEdge();
-      applyAttributes(edge, [attr("dir", value)], edgeAttributeSchema, noClasses);
+      applyEdgeAttributes(edge, [attr("dir", value)], noClasses);
       expect(edge.dir, value).toBe(dir);
       expect(edge.hstyle, value).toBeNull();
     }
 
     const oneMany = newEdge();
-    applyAttributes(oneMany, [attr("dir", "-<")], edgeAttributeSchema, noClasses);
+    applyEdgeAttributes(oneMany, [attr("dir", "-<")], noClasses);
     expect(oneMany.dir).toBe("forward");
     expect(oneMany.hstyle).toBe("onemany");
 
@@ -140,22 +138,18 @@ describe("edgeAttributeSchema", () => {
       [">-<", "both", "manymany"],
     ] as const) {
       const edge = newEdge();
-      applyAttributes(edge, [attr("dir", value)], edgeAttributeSchema, noClasses);
+      applyEdgeAttributes(edge, [attr("dir", value)], noClasses);
       expect(edge.dir, value).toBe(dir);
       expect(edge.hstyle, value).toBe(hstyle);
     }
 
-    expect(() => applyAttributes(newEdge(), [attr("dir", "sideways")], edgeAttributeSchema, noClasses)).toThrowError(
-      AttributeError,
-    );
-    expect(() => applyAttributes(newEdge(), [attr("dir", null)], edgeAttributeSchema, noClasses)).toThrowError(
-      AttributeError,
-    );
+    expect(() => applyEdgeAttributes(newEdge(), [attr("dir", "sideways")], noClasses)).toThrowError(AttributeError);
+    expect(() => applyEdgeAttributes(newEdge(), [attr("dir", null)], noClasses)).toThrowError(AttributeError);
   });
 
   it("sets hstyle, and for the one-to-many family also sets the implied dir", () => {
     const generalization = newEdge();
-    applyAttributes(generalization, [attr("hstyle", "generalization")], edgeAttributeSchema, noClasses);
+    applyEdgeAttributes(generalization, [attr("hstyle", "generalization")], noClasses);
     expect(generalization.hstyle).toBe("generalization");
     expect(generalization.dir).toBe("forward"); // unchanged from the default
 
@@ -167,30 +161,26 @@ describe("edgeAttributeSchema", () => {
       ["manymany", "both"],
     ] as const) {
       const edge = newEdge();
-      applyAttributes(edge, [attr("hstyle", value)], edgeAttributeSchema, noClasses);
+      applyEdgeAttributes(edge, [attr("hstyle", value)], noClasses);
       expect(edge.dir, value).toBe(dir);
       expect(edge.hstyle, value).toBe(value);
     }
 
-    expect(() => applyAttributes(newEdge(), [attr("hstyle", "bogus")], edgeAttributeSchema, noClasses)).toThrowError(
-      AttributeError,
-    );
-    expect(() => applyAttributes(newEdge(), [attr("hstyle", null)], edgeAttributeSchema, noClasses)).toThrowError(
-      AttributeError,
-    );
+    expect(() => applyEdgeAttributes(newEdge(), [attr("hstyle", "bogus")], noClasses)).toThrowError(AttributeError);
+    expect(() => applyEdgeAttributes(newEdge(), [attr("hstyle", null)], noClasses)).toThrowError(AttributeError);
   });
 
   it("sets folded/nofolded/thick, ignoring the attribute's value", () => {
     const folded = newEdge();
-    applyAttributes(folded, [attr("folded", null)], edgeAttributeSchema, noClasses);
+    applyEdgeAttributes(folded, [attr("folded", null)], noClasses);
     expect(folded.folded).toBe(true);
 
     const nofolded = newEdge();
-    applyAttributes(nofolded, [attr("nofolded", null)], edgeAttributeSchema, noClasses);
+    applyEdgeAttributes(nofolded, [attr("nofolded", null)], noClasses);
     expect(nofolded.folded).toBe(false);
 
     const thick = newEdge();
-    applyAttributes(thick, [attr("thick", null)], edgeAttributeSchema, noClasses);
+    applyEdgeAttributes(thick, [attr("thick", null)], noClasses);
     expect(thick.thick).toBe(3);
   });
 
@@ -199,14 +189,12 @@ describe("edgeAttributeSchema", () => {
     // no such fields, so setting them there just adds a meaningless,
     // never-read instance attribute. There's no reason to accept that
     // here.
-    expect(() => applyAttributes(newEdge(), [attr("colwidth", "2")], edgeAttributeSchema, noClasses)).toThrowError(
-      AttributeError,
-    );
+    expect(() => applyEdgeAttributes(newEdge(), [attr("colwidth", "2")], noClasses)).toThrowError(AttributeError);
   });
 
   it("throws AttributeError for an unknown attribute name", () => {
-    expect(() =>
-      applyAttributes(newEdge(), [attr("nonexistent", "value")], edgeAttributeSchema, noClasses),
-    ).toThrowError(AttributeError);
+    expect(() => applyEdgeAttributes(newEdge(), [attr("nonexistent", "value")], noClasses)).toThrowError(
+      AttributeError,
+    );
   });
 });
