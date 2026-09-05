@@ -75,7 +75,7 @@ describe("applyGroupAttributes", () => {
     expect(group.height).toBe(50);
     expect(group.color).toEqual([255, 0, 0]);
     expect(group.textcolor).toEqual([0, 0, 255]);
-    expect(group.style).toBe("dashed");
+    expect(group.style).toEqual({ type: "dashed" });
   });
 
   it("assigns null for a bare attribute with no value, since these have no dedicated setter", () => {
