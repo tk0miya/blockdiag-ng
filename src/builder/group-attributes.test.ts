@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { NodeGroup } from "../model/elements.js";
 import type { Attr } from "../parser/ast.js";
-import { AttributeError, applyAttributes, type ClassRegistry } from "./attributes.js";
-import { groupAttributeSchema } from "./group-attributes.js";
+import { AttributeError, type ClassRegistry } from "./attributes.js";
+import { applyGroupAttributes } from "./group-attributes.js";
 
 // Expected outputs were captured by running the original implementation's
 // NodeGroup.set_attributes() (vendor/blockdiag/src/blockdiag/elements.py)
@@ -43,10 +43,10 @@ function attr(name: string, value: string | null): Attr {
   return { type: "Attr", name, value };
 }
 
-describe("groupAttributeSchema", () => {
+describe("applyGroupAttributes", () => {
   it("applies plain string, int, and color attributes", () => {
     const group = newGroup();
-    applyAttributes(
+    applyGroupAttributes(
       group,
       [
         attr("label", '"group label"'),
@@ -62,7 +62,6 @@ describe("groupAttributeSchema", () => {
         attr("textcolor", "blue"),
         attr("style", "dashed"),
       ],
-      groupAttributeSchema,
       noClasses,
     );
     expect(group.label).toBe("group label");
@@ -81,48 +80,42 @@ describe("groupAttributeSchema", () => {
 
   it("assigns null for a bare attribute with no value, since these have no dedicated setter", () => {
     const group = newGroup();
-    applyAttributes(group, [attr("label", null)], groupAttributeSchema, noClasses);
+    applyGroupAttributes(group, [attr("label", null)], noClasses);
     expect(group.label).toBeNull();
   });
 
   it("throws AttributeError for color/textcolor/style/shape/orientation/thick with no value", () => {
     for (const name of ["color", "textcolor", "style", "shape", "orientation", "thick"]) {
-      expect(() => applyAttributes(newGroup(), [attr(name, null)], groupAttributeSchema, noClasses), name).toThrowError(
-        AttributeError,
-      );
+      expect(() => applyGroupAttributes(newGroup(), [attr(name, null)], noClasses), name).toThrowError(AttributeError);
     }
   });
 
   it("coerces thick to a number, unlike the original which leaves it a raw string", () => {
     const group = newGroup();
-    applyAttributes(group, [attr("thick", "5")], groupAttributeSchema, noClasses);
+    applyGroupAttributes(group, [attr("thick", "5")], noClasses);
     expect(group.thick).toBe(5);
-    expect(() => applyAttributes(newGroup(), [attr("thick", "5.5")], groupAttributeSchema, noClasses)).toThrowError(
-      AttributeError,
-    );
+    expect(() => applyGroupAttributes(newGroup(), [attr("thick", "5.5")], noClasses)).toThrowError(AttributeError);
   });
 
   it("validates and lowercases shape (box/line only)", () => {
     const group = newGroup();
-    applyAttributes(group, [attr("shape", "LINE")], groupAttributeSchema, noClasses);
+    applyGroupAttributes(group, [attr("shape", "LINE")], noClasses);
     expect(group.shape).toBe("line");
-    expect(() => applyAttributes(newGroup(), [attr("shape", "circle")], groupAttributeSchema, noClasses)).toThrowError(
-      AttributeError,
-    );
+    expect(() => applyGroupAttributes(newGroup(), [attr("shape", "circle")], noClasses)).toThrowError(AttributeError);
   });
 
   it("validates and lowercases orientation", () => {
     const group = newGroup();
-    applyAttributes(group, [attr("orientation", "PORTRAIT")], groupAttributeSchema, noClasses);
+    applyGroupAttributes(group, [attr("orientation", "PORTRAIT")], noClasses);
     expect(group.orientation).toBe("portrait");
-    expect(() =>
-      applyAttributes(newGroup(), [attr("orientation", "diagonal")], groupAttributeSchema, noClasses),
-    ).toThrowError(AttributeError);
+    expect(() => applyGroupAttributes(newGroup(), [attr("orientation", "diagonal")], noClasses)).toThrowError(
+      AttributeError,
+    );
   });
 
   it("throws AttributeError for an unknown attribute name", () => {
-    expect(() =>
-      applyAttributes(newGroup(), [attr("nonexistent", "value")], groupAttributeSchema, noClasses),
-    ).toThrowError(AttributeError);
+    expect(() => applyGroupAttributes(newGroup(), [attr("nonexistent", "value")], noClasses)).toThrowError(
+      AttributeError,
+    );
   });
 });
