@@ -19,7 +19,17 @@ export type RGB = readonly [red: number, green: number, blue: number];
 // to RGB.
 export type Color = RGB | "none";
 
-export type LineStyle = "none" | "solid" | "dotted" | "dashed" | string;
+export type LineStyle =
+  | { readonly type: "none" }
+  | { readonly type: "solid" }
+  | { readonly type: "dotted" }
+  | { readonly type: "dashed" }
+  // A custom dash pattern (e.g. a "style = 8,2" attribute): `pattern`
+  // holds the raw dash lengths as given, unscaled - the original
+  // multiplies each by the line's thickness only at render time
+  // (imagedraw/{png,svg,pdf}.py), independently in each backend, so this
+  // keeps that scaling a rendering concern rather than baking it in here.
+  | { readonly type: "custom"; readonly pattern: readonly number[] };
 
 export type LabelOrientation = "horizontal" | "vertical";
 

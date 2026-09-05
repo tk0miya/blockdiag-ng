@@ -85,7 +85,7 @@ describe("applyEdgeAttributes", () => {
     expect(edge.fontsize).toBe(12);
     expect(edge.color).toEqual([255, 0, 0]);
     expect(edge.textcolor).toEqual([0, 0, 255]);
-    expect(edge.style).toBe("dashed");
+    expect(edge.style).toEqual({ type: "dashed" });
   });
 
   it("assigns null for a bare attribute with no value, since these have no dedicated setter", () => {

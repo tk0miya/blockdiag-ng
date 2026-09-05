@@ -153,7 +153,7 @@ describe("applyNodeAttributes", () => {
   it("validates and lowercases the style attribute", () => {
     const node = newNode();
     applyNodeAttributes(node, [attr("style", "dashed")], noClasses);
-    expect(node.style).toBe("dashed");
+    expect(node.style).toEqual({ type: "dashed" });
     expect(() => applyNodeAttributes(newNode(), [attr("style", "bogus")], noClasses)).toThrowError(AttributeError);
   });
 
@@ -196,7 +196,7 @@ describe("applyNodeAttributes", () => {
     const node = newNode();
     applyNodeAttributes(node, [attr("class", "emphasis"), attr("label", '"hi"')], classes);
     expect(node.color).toEqual([255, 0, 0]);
-    expect(node.style).toBe("dashed");
+    expect(node.style).toEqual({ type: "dashed" });
     expect(node.label).toBe("hi");
   });
 
