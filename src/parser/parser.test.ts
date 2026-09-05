@@ -11,8 +11,13 @@ import { ParseError, parseString } from "./parser.js";
 // are accounted for below.
 
 describe("parseString", () => {
-  it("parses an empty diagram", () => {
+  it("parses an empty diagram, with and without a header", () => {
     expect(parseString("{ }")).toEqual({ type: "Diagram", header: null, stmts: [] });
+    expect(parseString("diagram { }")).toEqual({
+      type: "Diagram",
+      header: { keyword: "diagram", name: null },
+      stmts: [],
+    });
   });
 
   it("parses a diagram header with and without a name, and without a keyword", () => {
@@ -44,6 +49,27 @@ describe("parseString", () => {
         ],
       },
     ]);
+  });
+
+  it("keeps a String attribute value quoted regardless of which quote style was used", () => {
+    // Matches test_diagram_includes_nodes in the original's
+    // test_parser.py: values keep whichever quote style (single, double,
+    // triple-single, triple-double) and embedded opposite-style quote
+    // character they were written with - unquoting happens later, when
+    // building the domain model, not here.
+    const cases: [string, string][] = [
+      ['"foobar"', '"foobar"'],
+      ["'foobar'", "'foobar'"],
+      ['"""foobar"""', '"""foobar"""'],
+      ["'''foobar'''", "'''foobar'''"],
+      ['"""foo"bar"""', '"""foo"bar"""'],
+      ["'''foo'bar'''", "'''foo'bar'''"],
+    ];
+    for (const [source, expected] of cases) {
+      expect(parseString(`{ A [label = ${source}]; }`).stmts, source).toEqual([
+        { type: "Node", id: "A", attrs: [{ type: "Attr", name: "label", value: expected }] },
+      ]);
+    }
   });
 
   it("parses an edge chain, applying the same attrs to every link", () => {
@@ -126,6 +152,11 @@ describe("parseString", () => {
     expect(() => parseString("{ A -> ; }")).toThrowError(ParseError);
     expect(() => parseString("{ A")).toThrowError(ParseError);
     expect(() => parseString("{ A; } garbage")).toThrowError(ParseError);
+  });
+
+  it("throws ParseError for an empty string", () => {
+    // Matches test_parenthesis_ness in the original's test_parser.py.
+    expect(() => parseString("")).toThrowError(ParseError);
   });
 
   it("reports the offending position/token as plain values, not a Token", () => {
