@@ -53,20 +53,30 @@ import type {
   NodeStmt,
   Stmt,
 } from "./ast.js";
-import type { Token } from "./lexer.js";
+import type { Token, TokenType } from "./lexer.js";
 import { tokenize } from "./lexer.js";
 
+// Reports the offending position/token as plain values (line, column,
+// token type/value) rather than a Token, so catching this error doesn't
+// require knowing the lexer's Token/Position shape - matching how
+// LexerError (lexer.ts) reports its own position.
 export class ParseError extends Error {
-  constructor(
-    message: string,
-    readonly token: Token | undefined,
-  ) {
+  readonly line: number | undefined;
+  readonly column: number | undefined;
+  readonly tokenType: TokenType | undefined;
+  readonly tokenValue: string | undefined;
+
+  constructor(message: string, token: Token | undefined) {
     super(
       token === undefined
         ? `${message} at end of input`
         : `${message} at ${token.start.line}:${token.start.column} (got ${token.type} ${JSON.stringify(token.value)})`,
     );
     this.name = "ParseError";
+    this.line = token?.start.line;
+    this.column = token?.start.column;
+    this.tokenType = token?.type;
+    this.tokenValue = token?.value;
   }
 }
 
@@ -325,7 +335,10 @@ function sortStmts(stmts: readonly Stmt[]): Stmt[] {
     .sort((a, b) => weight(a) - weight(b));
 }
 
-export function parse(tokens: readonly Token[]): DiagramAst {
+// Not exported: this signature exposes Token, an internal detail of how
+// this module tokenizes its input rather than of the AST it produces.
+// parseString() is the module's public entry point.
+function parse(tokens: readonly Token[]): DiagramAst {
   const stream = new TokenStream(tokens);
   const header = parseDiagramHeader(stream);
   stream.expectOp("{");

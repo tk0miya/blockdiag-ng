@@ -128,6 +128,37 @@ describe("parseString", () => {
     expect(() => parseString("{ A; } garbage")).toThrowError(ParseError);
   });
 
+  it("reports the offending position/token as plain values, not a Token", () => {
+    // Catching this error shouldn't require knowing the lexer's
+    // Token/Position shape.
+    try {
+      parseString("{ A -> ; }");
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(ParseError);
+      const err = e as ParseError;
+      // "A" alone parses fine as a complete node_stmt (see the
+      // group/class/plugin backtracking tests below for why), so the
+      // next statement starts at "->" - which no alternative matches.
+      expect(err.line).toBe(1);
+      expect(err.column).toBe(5);
+      expect(err.tokenType).toBe("Op");
+      expect(err.tokenValue).toBe("->");
+    }
+
+    try {
+      parseString("{ A");
+      expect.unreachable();
+    } catch (e) {
+      expect(e).toBeInstanceOf(ParseError);
+      const err = e as ParseError;
+      expect(err.line).toBeUndefined();
+      expect(err.column).toBeUndefined();
+      expect(err.tokenType).toBeUndefined();
+      expect(err.tokenValue).toBeUndefined();
+    }
+  });
+
   describe("treats group/class/plugin as plain identifiers when the surrounding syntax doesn't match", () => {
     // "group"/"class"/"plugin" are not reserved words. Each is only
     // consumed as a keyword if the corresponding statement parses through
