@@ -23,11 +23,13 @@
   "devDependencies": {
     "@biomejs/biome": "^2.5.12",
     "@types/color-name": "^2.0.0",
+    "@types/fontkit": "^2.0.9",
     "@types/node": "^24.13.3",
     "typescript": "^7.0.2",
     "vitest": "^5.0.0"
   },
   "dependencies": {
-    "color-name": "^2.1.1"
+    "color-name": "^2.1.1",
+    "fontkit": "^2.0.4"
   }
 }
