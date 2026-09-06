@@ -107,12 +107,12 @@ describe("layoutDiagram", () => {
   it("keeps two parallel chains that merge back together level with each other", () => {
     const diagram = layout("diagram { A -> B -> C -> D; A -> E -> F -> D; }");
     expect(xy(diagram)).toEqual([
-      [0, 0],
-      [1, 0],
-      [2, 0],
-      [3, 0],
-      [1, 1],
-      [2, 1],
+      [0, 0], // A
+      [1, 0], // B
+      [1, 1], // E
+      [2, 0], // C
+      [2, 1], // F
+      [3, 0], // D
     ]);
     expect([diagram.colwidth, diagram.colheight]).toEqual([4, 2]);
   });
@@ -120,11 +120,11 @@ describe("layoutDiagram", () => {
   it("pushes a later sibling further down past a converging pair, once they're no longer a plain rhombus", () => {
     const diagram = layout("diagram { A -> B -> D; A -> C -> D; A -> E; }");
     expect(xy(diagram)).toEqual([
-      [0, 0],
-      [1, 0],
-      [2, 0],
-      [1, 1],
-      [1, 2],
+      [0, 0], // A
+      [1, 0], // B
+      [1, 1], // C
+      [1, 2], // E
+      [2, 0], // D
     ]);
     expect([diagram.colwidth, diagram.colheight]).toEqual([3, 3]);
   });
