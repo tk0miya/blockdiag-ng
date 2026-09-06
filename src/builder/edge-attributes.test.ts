@@ -10,6 +10,7 @@ import { applyEdgeAttributes } from "./edge-attributes.js";
 
 function newNode(id: string): DiagramNode {
   return {
+    kind: "node",
     id,
     label: id,
     xy: { x: 0, y: 0 },

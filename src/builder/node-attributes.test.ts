@@ -10,6 +10,7 @@ import { applyNodeAttributes } from "./node-attributes.js";
 
 function newNode(): DiagramNode {
   return {
+    kind: "node",
     id: "A",
     label: "",
     xy: { x: 0, y: 0 },

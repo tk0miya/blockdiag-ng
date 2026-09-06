@@ -51,16 +51,16 @@ describe("buildDiagram", () => {
     const diagram = build("diagram { group G { A -> B; } }");
     expect(diagram.nodes).toHaveLength(1);
     const [g] = diagram.nodes;
-    expect("nodes" in g && g.level).toBe(1);
-    expect("nodes" in g && g.nodes.map((n) => n.id)).toEqual(["A", "B"]);
-    expect("edges" in g && g.edges).toHaveLength(1);
+    expect(g.kind === "group" && g.level).toBe(1);
+    expect(g.kind === "group" && g.nodes.map((n) => n.id)).toEqual(["A", "B"]);
+    expect(g.kind === "group" && g.edges).toHaveLength(1);
     expect(diagram.edges).toHaveLength(0);
   });
 
   it("creates a distinct group for each unnamed group statement, never deduplicating them", () => {
     const diagram = build("diagram { group { A; } group { B; } }");
     expect(diagram.nodes).toHaveLength(2);
-    expect(diagram.nodes.map((g) => "nodes" in g && g.nodes.map((n) => n.id))).toEqual([["A"], ["B"]]);
+    expect(diagram.nodes.map((g) => g.kind === "group" && g.nodes.map((n) => n.id))).toEqual([["A"], ["B"]]);
   });
 
   it("removes a group that ends up with no nodes of its own", () => {

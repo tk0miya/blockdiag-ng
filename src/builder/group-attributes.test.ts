@@ -10,6 +10,7 @@ import { applyGroupAttributes } from "./group-attributes.js";
 
 function newGroup(): NodeGroup {
   return {
+    kind: "group",
     id: "G",
     label: null,
     xy: { x: 0, y: 0 },
