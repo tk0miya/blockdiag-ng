@@ -8,6 +8,7 @@ import { assignToGroup, BuildError } from "./assign-to-group.js";
 
 function newNode(id: string): DiagramNode {
   return {
+    kind: "node",
     id,
     label: id,
     xy: { x: 0, y: 0 },
@@ -37,6 +38,7 @@ function newNode(id: string): DiagramNode {
 
 function newGroup(id: string, level: number): NodeGroup {
   return {
+    kind: "group",
     id,
     label: "",
     xy: { x: 0, y: 0 },

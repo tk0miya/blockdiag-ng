@@ -88,6 +88,7 @@ export function createDefaultBuildDefaults(): BuildDefaults {
 
 export function createNode(id: string, defaults: NodeDefaults): DiagramNode {
   return {
+    kind: "node",
     id,
     label: id,
     xy: { x: 0, y: 0 },
@@ -117,6 +118,7 @@ export function createNode(id: string, defaults: NodeDefaults): DiagramNode {
 
 export function createGroup(id: string, defaults: GroupDefaults): NodeGroup {
   return {
+    kind: "group",
     id,
     // Unlike DiagramNode (label defaults to its own id), the original's
     // NodeGroup.__init__ never sets label from the id - it's left at
@@ -176,6 +178,7 @@ export function createEdge(node1: DiagramNode, node2: DiagramNode, defaults: Edg
 // same values again) so the two can't drift apart from each other.
 export function createDiagram(defaults: GroupDefaults): Diagram {
   return {
+    kind: "diagram",
     id: "",
     label: "",
     xy: { x: 0, y: 0 },

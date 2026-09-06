@@ -9,7 +9,7 @@
 // The `group`-attribute shorthand for nesting a node into its own group
 // (e.g. `A [group = G];`) lands in a follow-up step.
 import { randomUUID } from "node:crypto";
-import type { Diagram, DiagramEdge, DiagramNode, NodeGroup } from "../model/elements.js";
+import type { AnyGroup, Diagram, DiagramEdge, DiagramNode, NodeGroup } from "../model/elements.js";
 import type { Attr, DiagramAst, Stmt } from "../parser/ast.js";
 import { assignToGroup } from "./assign-to-group.js";
 import type { ClassRegistry } from "./attributes.js";
@@ -76,7 +76,7 @@ interface BuildContext {
   readonly edges: Map<string, DiagramEdge>;
 }
 
-function buildGroup(group: NodeGroup, stmts: readonly Stmt[], ctx: BuildContext): void {
+function buildGroup(group: AnyGroup, stmts: readonly Stmt[], ctx: BuildContext): void {
   for (const stmt of stmts) {
     switch (stmt.type) {
       case "Node": {
@@ -114,8 +114,8 @@ function buildGroup(group: NodeGroup, stmts: readonly Stmt[], ctx: BuildContext)
         break;
       }
       case "Attr":
-        if (group === ctx.diagram) {
-          applyDiagramAttribute(ctx.diagram, ctx.defaults, stmt, ctx.classes);
+        if (group.kind === "diagram") {
+          applyDiagramAttribute(group, ctx.defaults, stmt, ctx.classes);
         } else {
           applyGroupAttribute(group, stmt, ctx.classes);
         }
@@ -141,14 +141,14 @@ function buildGroup(group: NodeGroup, stmts: readonly Stmt[], ctx: BuildContext)
 // got relocated by assignToGroup()) is removed from the tree. Recurses
 // children-first, so a group left empty only because its own last
 // subgroup was just removed is caught too.
-function removeEmptyGroups(group: NodeGroup): void {
+function removeEmptyGroups(group: AnyGroup): void {
   for (const node of [...group.nodes]) {
-    if ("nodes" in node) {
+    if (node.kind === "group") {
       removeEmptyGroups(node);
     }
   }
   for (const node of [...group.nodes]) {
-    if ("nodes" in node && node.nodes.length === 0) {
+    if (node.kind === "group" && node.nodes.length === 0) {
       group.nodes.splice(group.nodes.indexOf(node), 1);
     }
   }
@@ -159,9 +159,9 @@ function removeEmptyGroups(group: NodeGroup): void {
 // `node2` sits - the original looks this up per node via
 // `DiagramEdge.find()`; this port groups every created edge by `node1`
 // once, up front, since every edge is already in hand here.
-function bindEdges(group: NodeGroup, edgesByNode1: ReadonlyMap<DiagramNode, readonly DiagramEdge[]>): void {
+function bindEdges(group: AnyGroup, edgesByNode1: ReadonlyMap<DiagramNode, readonly DiagramEdge[]>): void {
   for (const node of group.nodes) {
-    if ("nodes" in node) {
+    if (node.kind === "group") {
       bindEdges(node, edgesByNode1);
     } else {
       group.edges.push(...(edgesByNode1.get(node) ?? []));

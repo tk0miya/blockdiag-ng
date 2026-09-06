@@ -16,7 +16,7 @@
 // no value (silently assigning None), while parseIntAttr's requireValue
 // rejects it as an AttributeError, same as every other int-coerced
 // attribute here.
-import type { GroupOrientation, GroupShape, NodeGroup } from "../model/elements.js";
+import type { AnyGroup, GroupOrientation, GroupShape } from "../model/elements.js";
 import type { Attr } from "../parser/ast.js";
 import {
   AttributeError,
@@ -76,7 +76,7 @@ function parseGroupOrientation(value: string): GroupOrientation {
   return normalized;
 }
 
-export function applyGroupAttribute(target: NodeGroup, attr: Attr, classes: ClassRegistry): void {
+export function applyGroupAttribute(target: AnyGroup, attr: Attr, classes: ClassRegistry): void {
   const value = unquote(attr.value);
 
   if (attr.name === "class") {
@@ -143,7 +143,7 @@ export function applyGroupAttribute(target: NodeGroup, attr: Attr, classes: Clas
   }
 }
 
-export function applyGroupAttributes(target: NodeGroup, attrs: readonly Attr[], classes: ClassRegistry): void {
+export function applyGroupAttributes(target: AnyGroup, attrs: readonly Attr[], classes: ClassRegistry): void {
   for (const attr of attrs) {
     applyGroupAttribute(target, attr, classes);
   }

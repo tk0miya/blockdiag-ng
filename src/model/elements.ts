@@ -3,9 +3,14 @@
 // Mirrors the class hierarchy of the original Python implementation
 // (vendor/blockdiag/src/blockdiag/elements.py): Base -> Element ->
 // DiagramNode / NodeGroup, Base -> DiagramEdge, and NodeGroup -> Diagram
-// (which extends NodeGroup as the root container). This module defines
-// the shape of the data only; attribute parsing/validation and defaults
-// are built on top of these types in later steps.
+// (Diagram extends NodeGroup there, as the root container). Rather than
+// mirror that inheritance directly, DiagramNode/NodeGroup/Diagram are a
+// tagged union here (discriminated by `kind`), so code that needs to
+// single out "is this actually the root diagram" or "is this a node or a
+// group" can narrow on `kind` instead of an `instanceof`-style check.
+// This module defines the shape of the data only; attribute
+// parsing/validation and defaults are built on top of these types in
+// later steps.
 
 export interface XY {
   readonly x: number;
@@ -53,6 +58,7 @@ export type ShadowStyle = "solid" | "blur" | "none";
 export type EdgeLayout = "normal" | "flowchart";
 
 export interface DiagramNode {
+  readonly kind: "node";
   readonly id: string;
   // Defaults to the element's id, but can become null: a bare "label"
   // attribute with no value (e.g. "A [label];") assigns it directly.
@@ -78,10 +84,14 @@ export interface DiagramNode {
   stacked: boolean;
   labelOrientation: LabelOrientation;
   order: number;
-  group: NodeGroup | null;
+  group: AnyGroup | null;
 }
 
-export interface NodeGroup {
+// Fields shared by NodeGroup and Diagram (an ordinary group and the
+// root diagram are both a positioned, sized container of nodes/edges) -
+// not exported, since nothing outside this module needs to talk about
+// "either of those, minus their own kind tag".
+interface GroupFields {
   readonly id: string;
   // Can become null: a bare "label" attribute with no value (e.g.
   // "group A [label];") assigns it directly.
@@ -107,8 +117,18 @@ export interface NodeGroup {
   href: string | null;
   order: number;
   stacked: boolean;
-  group: NodeGroup | null;
+  group: AnyGroup | null;
 }
+
+export interface NodeGroup extends GroupFields {
+  readonly kind: "group";
+}
+
+// Either an ordinary group or the root diagram - the type of a node's or
+// group's `group` (enclosing-container) field, and of anything that
+// walks "up" the containment tree without caring whether it stops at an
+// ordinary group or reaches the root.
+export type AnyGroup = NodeGroup | Diagram;
 
 export interface DiagramEdge {
   node1: DiagramNode;
@@ -128,7 +148,11 @@ export interface DiagramEdge {
   thick: number | null;
 }
 
-export interface Diagram extends NodeGroup {
+// The single root container of a diagram: always at level 0, its own
+// `group` is always null, and - unlike an ordinary NodeGroup - it's never
+// itself an entry in some other container's `nodes`.
+export interface Diagram extends GroupFields {
+  readonly kind: "diagram";
   shadowStyle: ShadowStyle;
   linecolor: Color;
   nodeWidth: number | null;
