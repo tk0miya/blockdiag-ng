@@ -1,9 +1,8 @@
 // Ported from `DiagramLayoutManager.detect_circulars()`/
 // `detect_circulars_sub()`/`is_circular_ref()`/`adjust_node_order()`
-// (vendor/blockdiag/src/blockdiag/builder.py). Covers flat, group-free
-// diagrams only: `adjust_node_order()`'s `isinstance(node, NodeGroup)`
-// branch (reordering a group's own children) is deferred to a later,
-// group-aware layout step.
+// (vendor/blockdiag/src/blockdiag/builder.py).
+import type { DiagramEdge } from "../model/elements.js";
+import { compareChildNodeOrder } from "./group-boundary.js";
 import { getChildNodes, getParentNodes, type Positioned, type RelatedEdge } from "./related-nodes.js";
 
 function arraysEqual(a: readonly Positioned[], b: readonly Positioned[]): boolean {
@@ -130,16 +129,19 @@ export function isCircularRef(
   return false;
 }
 
-// Ported from `adjust_node_order()`, minus the `NodeGroup`-specific
-// branch (deferred - see the file comment above). Moves each node's
-// same-depth parents/children to sit next to each other in `nodes`, in
-// the order those relationships imply, so nodes reachable from one
-// another (via a chain of edges, not necessarily the same edge) end up
-// adjacent in the array that ultimately drives y-position assignment.
+// Ported from `adjust_node_order()`. Moves each node's same-depth
+// parents/children to sit next to each other in `nodes`, in the order
+// those relationships imply, so nodes reachable from one another (via a
+// chain of edges, not necessarily the same edge) end up adjacent in the
+// array that ultimately drives y-position assignment. When a node is
+// itself a group, its own children additionally get sorted against each
+// other by which of the group's real internal edges reaches each one
+// first (see compareChildNodeOrder()).
 export function adjustNodeOrder(
   nodes: Positioned[],
   edges: readonly RelatedEdge[],
   circulars: readonly Positioned[][],
+  allEdges: readonly DiagramEdge[],
 ): void {
   for (const node of [...nodes]) {
     const parents = getParentNodes(node, edges);
@@ -183,6 +185,30 @@ export function adjustNodeOrder(
       } else {
         nodes.splice(idx1, 1);
         nodes.splice(idx2 + 1, 0, node1);
+      }
+    }
+
+    if (node.kind === "group" && children.length > 1) {
+      // Repeated bubble-passes over the same fixed `children` list until a
+      // full pass makes no more swaps - not recomputed per pass, since
+      // it's `node`'s own (level-folded) children being sorted against
+      // each other, not `node` itself moving.
+      for (;;) {
+        let exchanged = false;
+        for (let i = 1; i < children.length; i++) {
+          const child1 = children[i - 1];
+          const child2 = children[i];
+          const idx1 = nodes.indexOf(child1);
+          const idx2 = nodes.indexOf(child2);
+          if (compareChildNodeOrder(node, child1, child2, allEdges) > 0 && idx1 < idx2) {
+            nodes.splice(idx1, 1);
+            nodes.splice(idx2 + 1, 0, child1);
+            exchanged = true;
+          }
+        }
+        if (!exchanged) {
+          break;
+        }
       }
     }
   }
