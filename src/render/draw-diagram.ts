@@ -17,6 +17,11 @@ import { renderDiamondNode } from "./shapes/diamond.js";
 import { renderDotsNode } from "./shapes/dots.js";
 import { renderEllipseNode } from "./shapes/ellipse.js";
 import { renderEndpointNode } from "./shapes/endpoint.js";
+import { renderFlowchartDatabaseNode } from "./shapes/flowchart-database.js";
+import { renderFlowchartInputNode } from "./shapes/flowchart-input.js";
+import { renderFlowchartLoopinNode } from "./shapes/flowchart-loopin.js";
+import { renderFlowchartLoopoutNode } from "./shapes/flowchart-loopout.js";
+import { renderFlowchartTerminatorNode } from "./shapes/flowchart-terminator.js";
 import { renderMailNode } from "./shapes/mail.js";
 import { renderMinidiamondNode } from "./shapes/minidiamond.js";
 import { renderNoneNode } from "./shapes/none.js";
@@ -30,12 +35,10 @@ import { SvgDocument } from "./svg-document.js";
 const DEFAULT_FONT_SIZE = 11;
 
 // Ported from `noderenderer.get(shape)`: dispatches a node to its
-// shape's renderer. The `flowchart.database`/`input`/`loopin`/
-// `loopout`/`terminator` shapes remain - a gap in the original Step 16
-// scope discovered only once actually implementing it (like
-// `flowchart.condition` was for Step 15, though that one was small
-// enough to fix immediately rather than needing its own step - this
-// one is split out as Step 16b instead). Unlike the original, which
+// shape's renderer. Every shape from `setup.py`'s
+// `[blockdiag_noderenderer]` entry points (including the `noderenderer/
+// flowchart/` node shapes, distinct from the `edge_layout = flowchart`
+// mode deferred to Step 18) is ported now - unlike the original, which
 // would fail obscurely (`None` is not callable) for a shape it doesn't
 // recognize, this names the shape so the gap is obvious while it's
 // still a port-in-progress limitation rather than a genuinely unknown
@@ -66,6 +69,11 @@ const NODE_RENDERERS: Record<string, NodeRenderer> = {
   actor: renderActorNode,
   beginpoint: renderBeginpointNode,
   endpoint: renderEndpointNode,
+  "flowchart.database": renderFlowchartDatabaseNode,
+  "flowchart.input": renderFlowchartInputNode,
+  "flowchart.loopin": renderFlowchartLoopinNode,
+  "flowchart.loopout": renderFlowchartLoopoutNode,
+  "flowchart.terminator": renderFlowchartTerminatorNode,
 };
 
 function drawNodes(
