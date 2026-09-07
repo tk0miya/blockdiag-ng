@@ -6,8 +6,7 @@
 // level's worth of layout only - group-layout.ts calls layoutGroup() once
 // per group (deepest first) to lay out each one's own direct children,
 // then converts every node's now-relative-to-its-own-group xy into an
-// absolute one. Reordering a group's own children based on its neighbors
-// is deferred to a later step.
+// absolute one.
 import type { AnyGroup, DiagramEdge, XY } from "../model/elements.js";
 import { getParentNodeYPos } from "./group-boundary.js";
 import { adjustNodeOrder, detectCirculars, isCircularRef } from "./node-order.js";
@@ -207,7 +206,7 @@ function rotateGroup(group: AnyGroup): void {
 export function layoutGroup(group: AnyGroup, edges: readonly RelatedEdge[], allEdges: readonly DiagramEdge[]): void {
   const circulars = detectCirculars(group.nodes, edges);
   setNodeXPos(group.nodes, edges, circulars);
-  adjustNodeOrder(group.nodes, edges, circulars);
+  adjustNodeOrder(group.nodes, edges, circulars, allEdges);
 
   const coordinates: XY[] = [];
   const heightRefs = new Set<string>();
