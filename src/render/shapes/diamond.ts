@@ -1,22 +1,22 @@
 // Ported from `noderenderer/diamond.py`: a diamond whose four points
 // extend `cellsize` beyond the midpoint of each of the node's own box
 // edges, with its label inset to the (smaller) box those points'
-// midpoints describe. Shadow/background-image branches deferred to
-// Step 17, same as box.ts.
+// midpoints describe. Plus its shadow branch. A background image is
+// deferred to Step 17c, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
-import type { Font } from "../font-metrics.js";
 import type { Box, Point } from "../geometry.js";
 import { boxBottom, boxLeft, boxRight, boxTop } from "../geometry.js";
 import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
+import type { RenderMode } from "../render-mode.js";
+import { SHADOW_COLOR, shiftShadowPoints } from "../shadow.js";
 import type { SvgDocument } from "../svg-document.js";
 
 export function renderDiamondNode(
   doc: SvgDocument,
   metrics: DiagramMetrics,
-  font: Font,
-  fontSize: number,
   node: DiagramNode,
+  mode: RenderMode,
 ): void {
   const box = nodeBox(metrics, node);
   const r = metrics.cellSize;
@@ -30,6 +30,11 @@ export function renderDiamondNode(
   const left: Point = { x: boxLeftPoint.x - r, y: boxLeftPoint.y };
   const connectors = [top, right, bottom, left, top];
 
+  if (mode.kind === "shadow") {
+    doc.polygon(shiftShadowPoints(connectors), { fill: SHADOW_COLOR, outline: SHADOW_COLOR, filter: mode.filter });
+    return;
+  }
+
   doc.polygon(connectors, { fill: node.color, outline: node.linecolor, style: node.style });
 
   if (node.label !== null) {
@@ -39,6 +44,6 @@ export function renderDiamondNode(
       x2: Math.floor((right.x + bottom.x) / 2),
       y2: Math.floor((right.y + bottom.y) / 2),
     };
-    doc.textarea(textBox, node.label, font, fontSize, { fill: node.textcolor, halign: "center" });
+    doc.textarea(textBox, node.label, mode.font, mode.fontSize, { fill: node.textcolor, halign: "center" });
   }
 }
