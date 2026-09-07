@@ -9,8 +9,8 @@
 // absolute one. Reordering a group's own children based on its neighbors
 // is deferred to a later step.
 import type { AnyGroup, DiagramEdge, XY } from "../model/elements.js";
+import { getParentNodeYPos } from "./group-boundary.js";
 import { adjustNodeOrder, detectCirculars, isCircularRef } from "./node-order.js";
-import { getParentNodeYPos } from "./parent-height.js";
 import { getChildNodes, type Positioned, type RelatedEdge } from "./related-nodes.js";
 
 // Ported from `set_node_xpos()`: places each node one column to the right
