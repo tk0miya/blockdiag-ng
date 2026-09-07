@@ -2,9 +2,18 @@
 // the nodes directly reachable from a node by an outgoing (child) or
 // incoming (parent) edge. Shared by the node-placement and node-ordering
 // steps, which both need to walk these relationships.
-import type { DiagramEdge, DiagramNode, NodeGroup } from "../model/elements.js";
+import type { DiagramNode, NodeGroup } from "../model/elements.js";
 
 export type Positioned = DiagramNode | NodeGroup;
+
+// A real DiagramEdge, or the group-boundary-folded stand-in for one that
+// group-layout.ts builds when laying out a level containing a group -
+// either way, all that matters here is which two things it connects.
+export interface RelatedEdge {
+  readonly node1: Positioned;
+  readonly node2: Positioned;
+  readonly folded: boolean | null;
+}
 
 // Ported from `get_related_nodes(child=True)`: the nodes reachable from
 // `node` by a direct outgoing edge, deduplicated, excluding `node` itself
@@ -17,8 +26,8 @@ export type Positioned = DiagramNode | NodeGroup;
 // that compares `x.xy.x` against `y.xy.y` - unrelated fields, so it's not
 // a valid ordering (not just a likely bug), and porting it wouldn't
 // reliably reproduce the original's output anyway.
-export function getChildNodes(node: Positioned, edges: readonly DiagramEdge[]): DiagramNode[] {
-  const children = new Set<DiagramNode>();
+export function getChildNodes(node: Positioned, edges: readonly RelatedEdge[]): Positioned[] {
+  const children = new Set<Positioned>();
   for (const edge of edges) {
     if (edge.node1 === node && !edge.folded) {
       children.add(edge.node2);
@@ -31,8 +40,8 @@ export function getChildNodes(node: Positioned, edges: readonly DiagramEdge[]): 
 
 // Ported from `get_related_nodes(parent=True)`: the mirror image of
 // getChildNodes() - the nodes with a direct outgoing edge to `node`.
-export function getParentNodes(node: Positioned, edges: readonly DiagramEdge[]): DiagramNode[] {
-  const parents = new Set<DiagramNode>();
+export function getParentNodes(node: Positioned, edges: readonly RelatedEdge[]): Positioned[] {
+  const parents = new Set<Positioned>();
   for (const edge of edges) {
     if (edge.node2 === node && !edge.folded) {
       parents.add(edge.node1);
