@@ -5,12 +5,9 @@
 // assigning nodes to their enclosing group via assignToGroup(), and finally
 // collecting each group's own edges. Coordinate/layout computation isn't
 // part of this step.
-//
-// The `group`-attribute shorthand for nesting a node into its own group
-// (e.g. `A [group = G];`) lands in a follow-up step.
 import { randomUUID } from "node:crypto";
 import type { AnyGroup, Diagram, DiagramEdge, DiagramNode, NodeGroup } from "../model/elements.js";
-import type { Attr, DiagramAst, Stmt } from "../parser/ast.js";
+import type { Attr, DiagramAst, NodeStmt, Stmt } from "../parser/ast.js";
 import { assignToGroup } from "./assign-to-group.js";
 import type { ClassRegistry } from "./attributes.js";
 import { applyDiagramAttribute } from "./diagram-attributes.js";
@@ -31,7 +28,14 @@ function findOrCreateNode(rawId: string, nodes: Map<string, DiagramNode>, defaul
   return node;
 }
 
-function findOrCreateGroup(rawId: string, groups: Map<string, NodeGroup>, defaults: BuildDefaults): NodeGroup {
+// A `null` id (an unnamed `group { ... }`, or a valueless `group`
+// attribute) has nothing to find, so it always creates a fresh group -
+// bypassing `groups` entirely, which means it can never be referenced
+// again by id either.
+function findOrCreateGroup(rawId: string | null, groups: Map<string, NodeGroup>, defaults: BuildDefaults): NodeGroup {
+  if (rawId === null) {
+    return createGroup(randomUUID(), defaults.group);
+  }
   const id = unquote(rawId);
   let group = groups.get(id);
   if (group === undefined) {
@@ -66,6 +70,24 @@ function findOrCreateEdge(
   return edge;
 }
 
+// Ported from `instantiate()`'s "Translate Node having group attribute to
+// Group" step: a `group` attribute is shorthand for nesting this one node
+// in its own `group { ... }` block right where it's written. Only the
+// last `group` attribute takes effect if several are given; the original
+// re-runs this same check each time a rewritten Group statement is itself
+// walked afresh, so a node with more than one `group` attribute ends up
+// progressively wrapped in one nested group per attribute.
+function extractNodeAttrs(stmt: NodeStmt): { groupId: string | null; attrs: readonly Attr[] } {
+  const lastIndex = stmt.attrs.map((a) => a.name).lastIndexOf("group");
+  if (lastIndex === -1) {
+    return { groupId: null, attrs: stmt.attrs };
+  }
+  return {
+    groupId: stmt.attrs[lastIndex].value,
+    attrs: stmt.attrs.filter((_, i) => i !== lastIndex),
+  };
+}
+
 interface BuildContext {
   readonly diagram: Diagram;
   readonly defaults: BuildDefaults;
@@ -80,8 +102,23 @@ function buildGroup(group: AnyGroup, stmts: readonly Stmt[], ctx: BuildContext):
   for (const stmt of stmts) {
     switch (stmt.type) {
       case "Node": {
+        const { groupId, attrs } = extractNodeAttrs(stmt);
+
+        // A `group` attribute naming the group this node is already
+        // directly in is a no-op rather than a nested self-reference -
+        // compare both sides unquoted so a quoted self-reference (e.g.
+        // `group = "G"` inside `group G { ... }`) is recognized as such
+        // too.
+        if (groupId !== null && unquote(groupId) !== group.id) {
+          const subgroup = findOrCreateGroup(groupId, ctx.groups, ctx.defaults);
+          subgroup.level = group.level + 1;
+          assignToGroup(subgroup, group);
+          buildGroup(subgroup, [{ ...stmt, attrs }], ctx);
+          break;
+        }
+
         const node = findOrCreateNode(stmt.id, ctx.nodes, ctx.defaults);
-        applyNodeAttributes(node, stmt.attrs, ctx.classes);
+        applyNodeAttributes(node, attrs, ctx.classes);
         assignToGroup(node, group);
         break;
       }
@@ -101,13 +138,7 @@ function buildGroup(group: AnyGroup, stmts: readonly Stmt[], ctx: BuildContext):
         break;
       }
       case "Group": {
-        // A group with no name gets a fresh id every time, bypassing
-        // ctx.groups entirely: it can never be referenced again by id, so
-        // there's nothing to deduplicate against.
-        const subgroup =
-          stmt.id === null
-            ? createGroup(randomUUID(), ctx.defaults.group)
-            : findOrCreateGroup(stmt.id, ctx.groups, ctx.defaults);
+        const subgroup = findOrCreateGroup(stmt.id, ctx.groups, ctx.defaults);
         subgroup.level = group.level + 1;
         assignToGroup(subgroup, group);
         buildGroup(subgroup, stmt.stmts, ctx);

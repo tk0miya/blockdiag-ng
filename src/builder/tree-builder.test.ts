@@ -90,4 +90,38 @@ describe("buildDiagram", () => {
   it("throws BuildError when a node is asked to belong to two unrelated groups", () => {
     expect(() => build("diagram { group A { N; } group B { N; } }")).toThrowError(/could not belong to two groups/);
   });
+
+  it("nests a node into its own group via a `group` attribute, preserving its other attributes", () => {
+    const diagram = build("diagram { A [group = G, color = red]; }");
+    expect(diagram.nodes.map((n) => n.id)).toEqual(["G"]);
+    const [g] = diagram.nodes;
+    const a = g.kind === "group" ? g.nodes[0] : undefined;
+    expect(a?.id).toBe("A");
+    expect(a?.color).toEqual([255, 0, 0]);
+  });
+
+  it("does not nest a node whose `group` attribute names the group it's already directly in", () => {
+    const diagram = build("diagram { group G { A [group = G]; } }");
+    expect(diagram.nodes.map((n) => n.id)).toEqual(["G"]);
+    const [g] = diagram.nodes;
+    expect(g.kind === "group" && g.nodes.map((n) => n.id)).toEqual(["A"]);
+  });
+
+  it("recognizes a quoted reference to the enclosing group as the same group, unlike the original", () => {
+    // See "Differences from the original" in README.md - the original
+    // crashes on this input.
+    const diagram = build('diagram { group G { A [group = "G"]; } }');
+    expect(diagram.nodes.map((n) => n.id)).toEqual(["G"]);
+    const [g] = diagram.nodes;
+    expect(g.kind === "group" && g.nodes.map((n) => n.id)).toEqual(["A"]);
+  });
+
+  it("nests progressively deeper for a node with more than one `group` attribute", () => {
+    const diagram = build("diagram { A [group = G1, group = G2]; }");
+    expect(diagram.nodes.map((n) => n.id)).toEqual(["G2"]);
+    const [g2] = diagram.nodes;
+    expect(g2.kind === "group" && g2.nodes.map((n) => n.id)).toEqual(["G1"]);
+    const g1 = g2.kind === "group" ? g2.nodes[0] : undefined;
+    expect(g1 && g1.kind === "group" && g1.nodes.map((n) => n.id)).toEqual(["A"]);
+  });
 });
