@@ -13,7 +13,6 @@ Apache License 2.0. See [LICENSE](./LICENSE).
 The original Python implementation is vendored as a git submodule under [`vendor/blockdiag`](./vendor/blockdiag) for reference during development:
 
 - Its source is used to cross-check parsing, layout, and rendering behavior against the original implementation.
-- Its test fixtures are reused to verify input/output compatibility.
 
 Clone with submodules, or initialize them afterwards:
 
