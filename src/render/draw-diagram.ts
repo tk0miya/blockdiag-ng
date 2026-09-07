@@ -3,10 +3,11 @@
 // background skeleton (`_draw_background()`'s group backgrounds and node
 // shadows) plus node rendering (`_draw_elements()`'s node loop,
 // `DiagramDraw.node()`) for the shapes ported so far. Edges, group
-// borders/labels, icons, and number badges are added in later steps.
+// borders/labels, and icons are added in later steps.
 import type { AnyGroup, Diagram, DiagramNode, NodeGroup } from "../model/elements.js";
 import type { Font } from "./font-metrics.js";
 import { collectAllNodes, createDiagramMetrics, type DiagramMetrics, marginBox, nodeBox, pageSize } from "./metrics.js";
+import { drawNumberBadge } from "./number-badge.js";
 import type { RenderMode } from "./render-mode.js";
 import { shadowFilter } from "./shadow.js";
 import { renderActorNode } from "./shapes/actor.js";
@@ -109,8 +110,10 @@ function drawNodes(
   defaultFontSize: number,
 ): void {
   for (const node of collectAllNodes(diagram)) {
-    const mode: RenderMode = { kind: "normal", font, fontSize: node.fontsize ?? defaultFontSize };
+    const fontSize = node.fontsize ?? defaultFontSize;
+    const mode: RenderMode = { kind: "normal", font, fontSize };
     rendererFor(node.shape)(doc, metrics, node, mode);
+    drawNumberBadge(doc, metrics, font, fontSize, node);
   }
 }
 
