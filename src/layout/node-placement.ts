@@ -6,12 +6,11 @@
 // level's worth of layout only - group-layout.ts calls layoutGroup() once
 // per group (deepest first) to lay out each one's own direct children,
 // then converts every node's now-relative-to-its-own-group xy into an
-// absolute one. A `NodeGroup` among a level's own nodes still gets no
-// special treatment when computing a child's y position here (a later
-// step adds that), nor does reordering a group's own children based on
-// its neighbors (another later step).
-import type { AnyGroup, XY } from "../model/elements.js";
+// absolute one. Reordering a group's own children based on its neighbors
+// is deferred to a later step.
+import type { AnyGroup, DiagramEdge, XY } from "../model/elements.js";
 import { adjustNodeOrder, detectCirculars, isCircularRef } from "./node-order.js";
+import { getParentNodeYPos } from "./parent-height.js";
 import { getChildNodes, type Positioned, type RelatedEdge } from "./related-nodes.js";
 
 // Ported from `set_node_xpos()`: places each node one column to the right
@@ -87,6 +86,7 @@ function setNodeYPos(
   edges: readonly RelatedEdge[],
   coordinates: XY[],
   heightRefs: Set<string>,
+  allEdges: readonly DiagramEdge[],
 ): boolean {
   for (let x = 0; x < node.colwidth; x++) {
     for (let y = 0; y < node.colheight; y++) {
@@ -111,6 +111,17 @@ function setNodeYPos(
       continue;
     }
 
+    if (node.kind === "group") {
+      // A latent quirk carried over as-is: 0 is a legitimate y position,
+      // but `parentHeight &&` treats it the same as "no data" (null) and
+      // skips the adjustment - matching the original's own
+      // `if parent_height and ...`, where 0 and None are equally falsy.
+      const parentHeight = getParentNodeYPos(node, child, allEdges);
+      if (parentHeight && parentHeight > height) {
+        height = parentHeight;
+      }
+    }
+
     if (prevChild !== null && grandchildCount > 1 && !isRhombus(prevChild, child, edges)) {
       const ys = coordinates.filter((c) => c.x > child.xy.x).map((c) => c.y);
       if (ys.length > 0 && Math.max(...ys) >= node.xy.y) {
@@ -119,7 +130,7 @@ function setNodeYPos(
     }
 
     for (;;) {
-      if (setNodeYPos(child, height, edges, coordinates, heightRefs)) {
+      if (setNodeYPos(child, height, edges, coordinates, heightRefs, allEdges)) {
         child.xy = { x: child.xy.x, y: height };
         markXy(coordinates, child.xy, child.colwidth, child.colheight);
         heightRefs.add(child.id);
@@ -188,9 +199,12 @@ function rotateGroup(group: AnyGroup): void {
 
 // Ported from `DiagramLayoutManager.do_layout()`'s node-placement calls:
 // lays out `group`'s own direct children, relative to `group`'s own
-// origin - `edges` must already be folded to `group`'s level (see
-// group-layout.ts's edgesAtLevel()).
-export function layoutGroup(group: AnyGroup, edges: readonly RelatedEdge[]): void {
+// origin. `edges` must already be folded to `group`'s level (see
+// group-layout.ts's edgesAtLevel()); `allEdges` is every real edge in the
+// diagram, unfolded, needed only when placing a child of a group whose
+// own internal nodes connect back out to that child (see
+// getParentNodeYPos()).
+export function layoutGroup(group: AnyGroup, edges: readonly RelatedEdge[], allEdges: readonly DiagramEdge[]): void {
   const circulars = detectCirculars(group.nodes, edges);
   setNodeXPos(group.nodes, edges, circulars);
   adjustNodeOrder(group.nodes, edges, circulars);
@@ -200,7 +214,7 @@ export function layoutGroup(group: AnyGroup, edges: readonly RelatedEdge[]): voi
   let height = 0;
   for (const node of group.nodes) {
     if (node.xy.x === 0) {
-      setNodeYPos(node, height, edges, coordinates, heightRefs);
+      setNodeYPos(node, height, edges, coordinates, heightRefs, allEdges);
       height = Math.max(...coordinates.map((c) => c.y)) + 1;
     }
   }

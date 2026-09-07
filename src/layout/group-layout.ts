@@ -96,9 +96,9 @@ export function layoutDiagram(diagram: Diagram): void {
   const allEdges = collectAllEdges(diagram);
 
   for (const group of traverseGroupsPostOrder(diagram)) {
-    layoutGroup(group, edgesAtLevel(allEdges, group.level));
+    layoutGroup(group, edgesAtLevel(allEdges, group.level), allEdges);
   }
-  layoutGroup(diagram, edgesAtLevel(allEdges, diagram.level));
+  layoutGroup(diagram, edgesAtLevel(allEdges, diagram.level), allEdges);
 
   cascadeAbsolutePositions(diagram);
 }
