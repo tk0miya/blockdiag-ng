@@ -13,7 +13,6 @@ Apache License 2.0. See [LICENSE](./LICENSE).
 The original Python implementation is vendored as a git submodule under [`vendor/blockdiag`](./vendor/blockdiag) for reference during development:
 
 - Its source is used to cross-check parsing, layout, and rendering behavior against the original implementation.
-- Its test fixtures are reused to verify input/output compatibility.
 
 Clone with submodules, or initialize them afterwards:
 
@@ -22,6 +21,13 @@ git clone --recurse-submodules <this-repo-url>
 # or, in an existing checkout:
 git submodule update --init --recursive
 ```
+
+### Vendored test assets
+
+[`vendor/vlgothic`](./vendor/vlgothic) holds a copy of the VL Gothic
+Regular font (version 2.111), vendored under its own license as a
+general-purpose real TTF fixture for tests that need an actual font file
+(e.g. font-metrics, rendering).
 
 ### Differences from the original
 
