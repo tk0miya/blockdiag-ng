@@ -1,52 +1,32 @@
 // Ported from `DiagramLayoutManager.do_layout()`'s node-placement steps
 // (vendor/blockdiag/src/blockdiag/builder.py): `set_node_xpos()` and
 // `set_node_ypos()`, plus the `NodeGroup.fixiate()` call that sizes the
-// diagram to its placed nodes afterward. This covers only the plain-grid
-// case: the original also runs `detect_circulars()`/`adjust_node_order()`
-// before this (skipped here - a later step adds circular-reference and
-// node-reordering support) and gives a `NodeGroup` among a diagram's own
-// nodes special treatment when computing a child's y position (skipped
-// here too - a later step adds group-aware layout). Diagram.run()'s
-// recursion into each nested group's own layout is likewise deferred to
-// that step.
-import type { Diagram, DiagramEdge, DiagramNode, NodeGroup, XY } from "../model/elements.js";
-
-type Positioned = DiagramNode | NodeGroup;
-
-// Ported from `get_related_nodes(child=True)`: the nodes reachable from
-// `node` by a direct outgoing edge, deduplicated, excluding `node` itself
-// (a self-loop edge), any node belonging to a different group, and any
-// edge marked `folded` (an edge hidden from layout/rendering by a
-// `folded`/`nofolded` attribute), ordered by each node's position in its
-// group (the order it was first referenced at).
-//
-// Not ported: `set_node_ypos()` re-sorts this same list with a comparator
-// that compares `x.xy.x` against `y.xy.y` - unrelated fields, so it's not
-// a valid ordering (not just a likely bug), and porting it wouldn't
-// reliably reproduce the original's output anyway.
-function getChildNodes(node: Positioned, edges: readonly DiagramEdge[]): DiagramNode[] {
-  const children = new Set<DiagramNode>();
-  for (const edge of edges) {
-    if (edge.node1 === node && !edge.folded) {
-      children.add(edge.node2);
-    }
-  }
-  return [...children]
-    .filter((child) => child !== node && child.group === node.group)
-    .sort((a, b) => a.order - b.order);
-}
+// diagram to its placed nodes afterward. Circular-reference detection and
+// node-reorder adjustment (node-order.ts) run around these; a `NodeGroup`
+// among a diagram's own nodes still gets no special treatment when
+// computing a child's y position here (a later step adds group-aware
+// layout), and Diagram.run()'s recursion into each nested group's own
+// layout is likewise deferred to that step.
+import type { Diagram, DiagramEdge, DiagramNode, XY } from "../model/elements.js";
+import { adjustNodeOrder, detectCirculars, isCircularRef } from "./node-order.js";
+import { getChildNodes, type Positioned } from "./related-nodes.js";
 
 // Ported from `set_node_xpos()`: places each node one column to the right
 // of its parent, one depth at a time, without moving a child that's
 // already further right (e.g. because another parent already pushed it
-// there).
-function setNodeXPos(nodes: readonly Positioned[], edges: readonly DiagramEdge[], depth = 0): void {
+// there) or a child it circularly refers back to.
+function setNodeXPos(
+  nodes: readonly Positioned[],
+  edges: readonly DiagramEdge[],
+  circulars: readonly Positioned[][],
+  depth = 0,
+): void {
   for (const node of nodes) {
     if (node.xy.x !== depth) {
       continue;
     }
     for (const child of getChildNodes(node, edges)) {
-      if (child.xy.x > node.xy.x + node.colwidth) {
+      if (isCircularRef(node, child, circulars, edges) || child.xy.x > node.xy.x + node.colwidth) {
         continue;
       }
       child.xy = { x: node.xy.x + node.colwidth, y: 0 };
@@ -54,7 +34,7 @@ function setNodeXPos(nodes: readonly Positioned[], edges: readonly DiagramEdge[]
   }
 
   if (nodes.some((node) => node.xy.x > depth)) {
-    setNodeXPos(nodes, edges, depth + 1);
+    setNodeXPos(nodes, edges, circulars, depth + 1);
   }
 }
 
@@ -168,7 +148,9 @@ function fixiateDiagram(diagram: Diagram): void {
 
 // Ported from `DiagramLayoutManager.do_layout()`'s node-placement calls.
 export function layoutDiagram(diagram: Diagram): void {
-  setNodeXPos(diagram.nodes, diagram.edges);
+  const circulars = detectCirculars(diagram.nodes, diagram.edges);
+  setNodeXPos(diagram.nodes, diagram.edges, circulars);
+  adjustNodeOrder(diagram.nodes, diagram.edges, circulars);
 
   const coordinates: XY[] = [];
   const heightRefs = new Set<string>();
