@@ -1,13 +1,14 @@
 // Ported from `DiagramDraw` (vendor/blockdiag/src/blockdiag/drawer.py):
 // the entry point tying a laid-out `Diagram` to an SVG document. Covers
-// background skeleton (`_draw_background()`'s group loop) plus node
-// rendering (`_draw_elements()`'s node loop, `DiagramDraw.node()`) for
-// the shapes ported so far. Node shadows (also part of
-// `_draw_background()`), edges, group borders/labels, and the rest of
-// the node shapes are added in later steps.
+// background skeleton (`_draw_background()`'s group backgrounds and node
+// shadows) plus node rendering (`_draw_elements()`'s node loop,
+// `DiagramDraw.node()`) for the shapes ported so far. Edges, group
+// borders/labels, icons, and number badges are added in later steps.
 import type { AnyGroup, Diagram, DiagramNode, NodeGroup } from "../model/elements.js";
 import type { Font } from "./font-metrics.js";
 import { collectAllNodes, createDiagramMetrics, type DiagramMetrics, marginBox, nodeBox, pageSize } from "./metrics.js";
+import type { RenderMode } from "./render-mode.js";
+import { shadowFilter } from "./shadow.js";
 import { renderActorNode } from "./shapes/actor.js";
 import { renderBeginpointNode } from "./shapes/beginpoint.js";
 import { renderBoxNode } from "./shapes/box.js";
@@ -43,13 +44,7 @@ const DEFAULT_FONT_SIZE = 11;
 // recognize, this names the shape so the gap is obvious while it's
 // still a port-in-progress limitation rather than a genuinely unknown
 // shape.
-type NodeRenderer = (
-  doc: SvgDocument,
-  metrics: DiagramMetrics,
-  font: Font,
-  fontSize: number,
-  node: DiagramNode,
-) => void;
+type NodeRenderer = (doc: SvgDocument, metrics: DiagramMetrics, node: DiagramNode, mode: RenderMode) => void;
 
 const NODE_RENDERERS: Record<string, NodeRenderer> = {
   box: renderBoxNode,
@@ -76,6 +71,36 @@ const NODE_RENDERERS: Record<string, NodeRenderer> = {
   "flowchart.terminator": renderFlowchartTerminatorNode,
 };
 
+function rendererFor(shape: string): NodeRenderer {
+  const renderer = NODE_RENDERERS[shape];
+  if (renderer === undefined) {
+    throw new Error(`node shape not yet supported: ${shape}`);
+  }
+  return renderer;
+}
+
+// Ported from `DiagramDraw._draw_background()`'s node loop: every
+// node's shadow, drawn before (so ends up underneath) anything from
+// `drawNodes()` below - a node whose own color is the literal `"none"`
+// casts none, and `shadow_style = "none"` turns shadows off for the
+// whole diagram.
+function drawNodeShadows(
+  doc: SvgDocument,
+  metrics: DiagramMetrics,
+  diagram: Diagram,
+  font: Font,
+  defaultFontSize: number,
+): void {
+  if (diagram.shadowStyle === "none") return;
+  const filter = shadowFilter(diagram.shadowStyle);
+
+  for (const node of collectAllNodes(diagram)) {
+    if (node.color === "none") continue;
+    const mode: RenderMode = { kind: "shadow", font, fontSize: node.fontsize ?? defaultFontSize, filter };
+    rendererFor(node.shape)(doc, metrics, node, mode);
+  }
+}
+
 function drawNodes(
   doc: SvgDocument,
   metrics: DiagramMetrics,
@@ -84,11 +109,8 @@ function drawNodes(
   defaultFontSize: number,
 ): void {
   for (const node of collectAllNodes(diagram)) {
-    const renderer = NODE_RENDERERS[node.shape];
-    if (renderer === undefined) {
-      throw new Error(`node shape not yet supported: ${node.shape}`);
-    }
-    renderer(doc, metrics, font, node.fontsize ?? defaultFontSize, node);
+    const mode: RenderMode = { kind: "normal", font, fontSize: node.fontsize ?? defaultFontSize };
+    rendererFor(node.shape)(doc, metrics, node, mode);
   }
 }
 
@@ -124,8 +146,10 @@ export function renderDiagramToSvg(
   const metrics = createDiagramMetrics(diagram);
   const doc = new SvgDocument();
 
+  const fontSize = options.fontSize ?? DEFAULT_FONT_SIZE;
   drawGroupBackgrounds(doc, metrics, diagram);
-  drawNodes(doc, metrics, diagram, options.font, options.fontSize ?? DEFAULT_FONT_SIZE);
+  drawNodeShadows(doc, metrics, diagram, options.font, fontSize);
+  drawNodes(doc, metrics, diagram, options.font, fontSize);
 
   return doc.toString(pageSize(metrics, diagram.colwidth, diagram.colheight));
 }

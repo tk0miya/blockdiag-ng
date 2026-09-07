@@ -25,6 +25,16 @@ function escapeXmlText(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Ported from `svg.py`'s module-level `style()`: the CSS behind a
+// group's background blur (`"blur"`) or a node's shadow blur
+// (`"transp-blur"` - the same blur, plus some transparency so an
+// overlapping shadow doesn't double up solid black).
+function filterCss(filter: "blur" | "transp-blur" | undefined): string {
+  if (filter === "blur") return "filter:url(#filter_blur)";
+  if (filter === "transp-blur") return "filter:url(#filter_blur);opacity:0.7;fill-opacity:1";
+  return "";
+}
+
 // Ported from `svg.py`'s module-level `dasharray()`: a `style`
 // attribute's dash pattern, scaled by the line's own thickness (each
 // backend does this scaling itself, independently - see model/
@@ -55,22 +65,21 @@ export class SvgDocument {
   private readonly elements: string[] = [];
 
   // Ported from `rectangle()`. `filter: "blur"` is the soft, blurred
-  // backdrop the original always draws behind a box-shaped group (not to
-  // be confused with a node's own drop shadow, which is a separate,
-  // `shadow_style`-controlled thing added once node shadows are, in
-  // Step 17).
+  // backdrop the original always draws behind a box-shaped group;
+  // `"transp-blur"` is the same blur (plus some transparency) behind a
+  // node's own shadow instead (`shadow_style`-controlled - see
+  // shadow.ts).
   rectangle(
     box: Box,
     options: {
       readonly fill?: Color;
       readonly outline?: Color;
       readonly style?: LineStyle | null;
-      readonly filter?: "blur";
+      readonly filter?: "blur" | "transp-blur";
     },
   ): void {
     const dasharray = svgDasharray(options.style ?? null, null);
-    const filterStyle = options.filter === "blur" ? `filter:url(#filter_blur)` : "";
-    const style = [filterStyle].filter((s) => s !== "").join(";");
+    const style = filterCss(options.filter);
     this.elements.push(
       `<rect x="${box.x1}" y="${box.y1}" width="${boxWidth(box)}" height="${boxHeight(box)}"` +
         ` fill="${cssColor(options.fill ?? "none")}"` +
@@ -89,6 +98,7 @@ export class SvgDocument {
       readonly outline?: Color;
       readonly style?: LineStyle | null;
       readonly thick?: number | null;
+      readonly filter?: "blur" | "transp-blur";
     },
   ): void {
     const rx = boxWidth(box) / 2;
@@ -96,10 +106,12 @@ export class SvgDocument {
     const cx = box.x1 + rx;
     const cy = box.y1 + ry;
     const dasharray = svgDasharray(options.style ?? null, options.thick ?? null);
+    const style = filterCss(options.filter);
     this.elements.push(
       `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${cssColor(options.fill ?? "none")}"` +
         (options.outline !== undefined ? ` stroke="${cssColor(options.outline)}"` : "") +
         (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
+        (style !== "" ? ` style="${style}"` : "") +
         `/>`,
     );
   }
@@ -114,14 +126,17 @@ export class SvgDocument {
       readonly outline?: Color;
       readonly style?: LineStyle | null;
       readonly thick?: number | null;
+      readonly filter?: "blur" | "transp-blur";
     },
   ): void {
     const pointList = points.map((p) => `${Math.trunc(p.x)},${Math.trunc(p.y)}`).join(" ");
     const dasharray = svgDasharray(options.style ?? null, options.thick ?? null);
+    const style = filterCss(options.filter);
     this.elements.push(
       `<polygon points="${pointList}" fill="${cssColor(options.fill ?? "none")}"` +
         (options.outline !== undefined ? ` stroke="${cssColor(options.outline)}"` : "") +
         (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
+        (style !== "" ? ` style="${style}"` : "") +
         `/>`,
     );
   }
@@ -136,13 +151,16 @@ export class SvgDocument {
       readonly outline?: Color;
       readonly style?: LineStyle | null;
       readonly thick?: number | null;
+      readonly filter?: "blur" | "transp-blur";
     },
   ): void {
     const dasharray = svgDasharray(options.style ?? null, options.thick ?? null);
+    const style = filterCss(options.filter);
     this.elements.push(
       `<path d="${d}" fill="${cssColor(options.fill ?? "none")}"` +
         (options.outline !== undefined ? ` stroke="${cssColor(options.outline)}"` : "") +
         (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
+        (style !== "" ? ` style="${style}"` : "") +
         `/>`,
     );
   }
