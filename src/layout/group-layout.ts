@@ -24,8 +24,9 @@ function traverseGroupsPostOrder(group: AnyGroup): AnyGroup[] {
 // Every edge anywhere in the diagram, regardless of which group it's
 // bound to (tree-builder.ts binds each edge to whichever group directly
 // contains its source node) - edgesAtLevel() needs the full set to fold
-// from, not just one group's own.
-function collectAllEdges(group: AnyGroup): DiagramEdge[] {
+// from, not just one group's own; edge-routing.ts reuses it too, for the
+// same reason.
+export function collectAllEdges(group: AnyGroup): DiagramEdge[] {
   const edges = [...group.edges];
   for (const node of group.nodes) {
     if (node.kind === "group") {
