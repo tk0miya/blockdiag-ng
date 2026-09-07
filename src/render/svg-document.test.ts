@@ -76,6 +76,22 @@ describe("SvgDocument", () => {
     });
   });
 
+  describe("path", () => {
+    it("draws a filled, outlined path from raw path data", () => {
+      const doc = new SvgDocument();
+      doc.path("M 0 0 L 10 0 A5,5 0 0 1 10 10", { fill: [255, 255, 255], outline: [0, 0, 0] });
+      expect(doc.toString({ width: 20, height: 20 })).toContain(
+        '<path d="M 0 0 L 10 0 A5,5 0 0 1 10 10" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+      );
+    });
+
+    it("adds a stroke-dasharray for a dashed style", () => {
+      const doc = new SvgDocument();
+      doc.path("M 0 0 L 10 0", { outline: [0, 0, 0], style: { type: "dashed" } });
+      expect(doc.toString({ width: 20, height: 20 })).toContain('stroke-dasharray="4"');
+    });
+  });
+
   describe("line", () => {
     // A multi-point line becomes one <path> per consecutive pair of
     // points, not one path with multiple segments - verified against

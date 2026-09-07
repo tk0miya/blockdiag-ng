@@ -106,6 +106,27 @@ export class SvgDocument {
     );
   }
 
+  // Ported from `path()`: a raw path (arcs included, unlike `line()`'s
+  // straight segments), for shapes `rectangle()`/`ellipse()`/`polygon()`
+  // can't express - so far, `roundedbox`'s rounded-corner outline.
+  path(
+    d: string,
+    options: {
+      readonly fill?: Color;
+      readonly outline?: Color;
+      readonly style?: LineStyle | null;
+      readonly thick?: number | null;
+    },
+  ): void {
+    const dasharray = svgDasharray(options.style ?? null, options.thick ?? null);
+    this.elements.push(
+      `<path d="${d}" fill="${cssColor(options.fill ?? "none")}"` +
+        (options.outline !== undefined ? ` stroke="${cssColor(options.outline)}"` : "") +
+        (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
+        `/>`,
+    );
+  }
+
   // Ported from `line()` - by way of the `linejump` filter that always
   // wraps the original's real drawer (`DiagramDraw.__init__`'s
   // `filters=['linejump']`), which is what actually receives every
