@@ -4,8 +4,7 @@
 // diagrams only: `adjust_node_order()`'s `isinstance(node, NodeGroup)`
 // branch (reordering a group's own children) is deferred to a later,
 // group-aware layout step.
-import type { DiagramEdge } from "../model/elements.js";
-import { getChildNodes, getParentNodes, type Positioned } from "./related-nodes.js";
+import { getChildNodes, getParentNodes, type Positioned, type RelatedEdge } from "./related-nodes.js";
 
 function arraysEqual(a: readonly Positioned[], b: readonly Positioned[]): boolean {
   return a.length === b.length && a.every((node, i) => node === b[i]);
@@ -27,7 +26,7 @@ function removeFirstEqual(circulars: Positioned[][], target: readonly Positioned
 function detectCircularsSub(
   node: Positioned,
   parents: readonly Positioned[],
-  edges: readonly DiagramEdge[],
+  edges: readonly RelatedEdge[],
   circulars: Positioned[][],
 ): void {
   for (const child of getChildNodes(node, edges)) {
@@ -47,7 +46,7 @@ function detectCircularsSub(
 // starting nodes can describe overlapping loops through a shared node -
 // the cleanup pass below merges any pair that intersects into one
 // (dropping either that turns out to be wholly contained in the other).
-export function detectCirculars(nodes: readonly Positioned[], edges: readonly DiagramEdge[]): Positioned[][] {
+export function detectCirculars(nodes: readonly Positioned[], edges: readonly RelatedEdge[]): Positioned[][] {
   const circulars: Positioned[][] = [];
   for (const node of nodes) {
     if (!circulars.some((c) => c.includes(node))) {
@@ -89,7 +88,7 @@ export function isCircularRef(
   node1: Positioned,
   node2: Positioned,
   circulars: readonly Positioned[][],
-  edges: readonly DiagramEdge[],
+  edges: readonly RelatedEdge[],
 ): boolean {
   for (const circular of circulars) {
     if (!circular.includes(node1) || !circular.includes(node2)) {
@@ -139,7 +138,7 @@ export function isCircularRef(
 // adjacent in the array that ultimately drives y-position assignment.
 export function adjustNodeOrder(
   nodes: Positioned[],
-  edges: readonly DiagramEdge[],
+  edges: readonly RelatedEdge[],
   circulars: readonly Positioned[][],
 ): void {
   for (const node of [...nodes]) {

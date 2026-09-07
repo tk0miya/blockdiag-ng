@@ -1,15 +1,18 @@
 // Ported from `DiagramLayoutManager.do_layout()`'s node-placement steps
 // (vendor/blockdiag/src/blockdiag/builder.py): `set_node_xpos()` and
-// `set_node_ypos()`, plus the `NodeGroup.fixiate()` call that sizes the
-// diagram to its placed nodes afterward. Circular-reference detection and
-// node-reorder adjustment (node-order.ts) run around these; a `NodeGroup`
-// among a diagram's own nodes still gets no special treatment when
-// computing a child's y position here (a later step adds group-aware
-// layout), and Diagram.run()'s recursion into each nested group's own
-// layout is likewise deferred to that step.
-import type { Diagram, DiagramEdge, DiagramNode, XY } from "../model/elements.js";
+// `set_node_ypos()`, plus the `NodeGroup.fixiate()` call that sizes a
+// group to its placed nodes afterward. Circular-reference detection and
+// node-reorder adjustment (node-order.ts) run around these. This is one
+// level's worth of layout only - group-layout.ts calls layoutGroup() once
+// per group (deepest first) to lay out each one's own direct children,
+// then converts every node's now-relative-to-its-own-group xy into an
+// absolute one. A `NodeGroup` among a level's own nodes still gets no
+// special treatment when computing a child's y position here (a later
+// step adds that), nor does reordering a group's own children based on
+// its neighbors (another later step).
+import type { AnyGroup, XY } from "../model/elements.js";
 import { adjustNodeOrder, detectCirculars, isCircularRef } from "./node-order.js";
-import { getChildNodes, type Positioned } from "./related-nodes.js";
+import { getChildNodes, type Positioned, type RelatedEdge } from "./related-nodes.js";
 
 // Ported from `set_node_xpos()`: places each node one column to the right
 // of its parent, one depth at a time, without moving a child that's
@@ -17,7 +20,7 @@ import { getChildNodes, type Positioned } from "./related-nodes.js";
 // there) or a child it circularly refers back to.
 function setNodeXPos(
   nodes: readonly Positioned[],
-  edges: readonly DiagramEdge[],
+  edges: readonly RelatedEdge[],
   circulars: readonly Positioned[][],
   depth = 0,
 ): void {
@@ -54,7 +57,7 @@ function markXy(coordinates: XY[], xy: XY, width: number, height: number): void 
 // step by step, converges on the same node - the "diamond" shape
 // (A->B, A->C, B->D, C->D) that set_node_ypos() checks for before letting
 // an otherwise-vertically-stacked sibling push a later one further down.
-function isRhombus(node1: DiagramNode, node2: DiagramNode, edges: readonly DiagramEdge[]): boolean {
+function isRhombus(node1: Positioned, node2: Positioned, edges: readonly RelatedEdge[]): boolean {
   let a = node1;
   let b = node2;
   for (;;) {
@@ -81,7 +84,7 @@ function isRhombus(node1: DiagramNode, node2: DiagramNode, edges: readonly Diagr
 function setNodeYPos(
   node: Positioned,
   height: number,
-  edges: readonly DiagramEdge[],
+  edges: readonly RelatedEdge[],
   coordinates: XY[],
   heightRefs: Set<string>,
 ): boolean {
@@ -99,7 +102,7 @@ function setNodeYPos(
   const grandchildCount = children.filter((child) => getChildNodes(child, edges).length > 0).length;
 
   let count = 0;
-  let prevChild: DiagramNode | null = null;
+  let prevChild: Positioned | null = null;
   for (const child of children) {
     if (heightRefs.has(child.id)) {
       continue;
@@ -136,31 +139,72 @@ function setNodeYPos(
   return true;
 }
 
-// Ported from `NodeGroup.fixiate()`: sizes the diagram to the
-// furthest-extending edge of its placed nodes. Left untouched (at its
-// build-time default of 1x1) when there are no nodes to measure.
-function fixiateDiagram(diagram: Diagram): void {
-  if (diagram.nodes.length > 0) {
-    diagram.colwidth = Math.max(...diagram.nodes.map((node) => node.xy.x + node.colwidth));
-    diagram.colheight = Math.max(...diagram.nodes.map((node) => node.xy.y + node.colheight));
+// Ported from `NodeGroup.fixiate()` (its `fixiate_nodes=False` case -
+// group-layout.ts handles the `True` case, converting every node's xy
+// from relative-to-its-own-group to absolute, once every level has its
+// own layout done). Sizes `group` to the furthest-extending edge of its
+// placed nodes; left untouched (at its build-time default of 1x1) when
+// there are no nodes to measure.
+function fixiateGroup(group: AnyGroup): void {
+  if (group.nodes.length > 0) {
+    group.colwidth = Math.max(...group.nodes.map((node) => node.xy.x + node.colwidth));
+    group.colheight = Math.max(...group.nodes.map((node) => node.xy.y + node.colheight));
   }
 }
 
-// Ported from `DiagramLayoutManager.do_layout()`'s node-placement calls.
-export function layoutDiagram(diagram: Diagram): void {
-  const circulars = detectCirculars(diagram.nodes, diagram.edges);
-  setNodeXPos(diagram.nodes, diagram.edges, circulars);
-  adjustNodeOrder(diagram.nodes, diagram.edges, circulars);
+// Ported from `rotate_diagram()`: swaps x/y and colwidth/colheight for
+// every descendant of `group` at any depth (not just its direct
+// children - `NodeGroup.traverse_nodes()` recurses), toggling any nested
+// group's own orientation flag along the way, then does the same swap
+// for `group` itself (whose own orientation flag is left alone - only
+// entries `traverse_nodes()` yields get toggled, and that excludes
+// `group` itself). Called once per level, right after that level's own
+// `fixiateGroup()`, so a group nested several levels deep can have its
+// content flipped once by its own level's rotation and flipped again by
+// an ancestor's.
+function rotateGroup(group: AnyGroup): void {
+  if (group.orientation !== "portrait") {
+    return;
+  }
+
+  const rotateDescendants = (of: AnyGroup): void => {
+    for (const node of of.nodes) {
+      node.xy = { x: node.xy.y, y: node.xy.x };
+      const width = node.colwidth;
+      node.colwidth = node.colheight;
+      node.colheight = width;
+      if (node.kind === "group") {
+        node.orientation = node.orientation === "portrait" ? "landscape" : "portrait";
+        rotateDescendants(node);
+      }
+    }
+  };
+  rotateDescendants(group);
+
+  const width = group.colwidth;
+  group.colwidth = group.colheight;
+  group.colheight = width;
+}
+
+// Ported from `DiagramLayoutManager.do_layout()`'s node-placement calls:
+// lays out `group`'s own direct children, relative to `group`'s own
+// origin - `edges` must already be folded to `group`'s level (see
+// group-layout.ts's edgesAtLevel()).
+export function layoutGroup(group: AnyGroup, edges: readonly RelatedEdge[]): void {
+  const circulars = detectCirculars(group.nodes, edges);
+  setNodeXPos(group.nodes, edges, circulars);
+  adjustNodeOrder(group.nodes, edges, circulars);
 
   const coordinates: XY[] = [];
   const heightRefs = new Set<string>();
   let height = 0;
-  for (const node of diagram.nodes) {
+  for (const node of group.nodes) {
     if (node.xy.x === 0) {
-      setNodeYPos(node, height, diagram.edges, coordinates, heightRefs);
+      setNodeYPos(node, height, edges, coordinates, heightRefs);
       height = Math.max(...coordinates.map((c) => c.y)) + 1;
     }
   }
 
-  fixiateDiagram(diagram);
+  fixiateGroup(group);
+  rotateGroup(group);
 }
