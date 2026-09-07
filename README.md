@@ -23,6 +23,13 @@ git clone --recurse-submodules <this-repo-url>
 git submodule update --init --recursive
 ```
 
+### Vendored test assets
+
+[`vendor/vlgothic`](./vendor/vlgothic) holds a copy of the VL Gothic
+Regular font (version 2.111), vendored under its own license as a
+general-purpose real TTF fixture for tests that need an actual font file
+(e.g. font-metrics, rendering).
+
 ### Differences from the original
 
 blockdiag-ng aims for input/output compatibility with the original, but
