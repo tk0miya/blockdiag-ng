@@ -15,10 +15,51 @@ export interface Size {
   readonly height: number;
 }
 
+export interface Point {
+  readonly x: number;
+  readonly y: number;
+}
+
 export function boxWidth(box: Box): number {
   return box.x2 - box.x1;
 }
 
 export function boxHeight(box: Box): number {
   return box.y2 - box.y1;
+}
+
+// Ported from `Box.get_padding_for()`: the offset from `box`'s own
+// top-left at which a `size`-shaped thing sits when aligned within it -
+// flush against an edge (plus `padding`) for `"left"`/`"right"`/
+// `"top"`/`"bottom"`, or centered (ignoring `padding`) otherwise.
+export function getPaddingFor(
+  box: Box,
+  size: Size,
+  options: {
+    readonly halign?: "left" | "center" | "right";
+    readonly valign?: "top" | "center" | "bottom";
+    readonly padding?: number;
+  } = {},
+): Point {
+  const padding = options.padding ?? 0;
+
+  let x: number;
+  if (options.halign === "left") {
+    x = padding;
+  } else if (options.halign === "right") {
+    x = boxWidth(box) - size.width - padding;
+  } else {
+    x = Math.ceil((boxWidth(box) - size.width) / 2);
+  }
+
+  let y: number;
+  if (options.valign === "top") {
+    y = padding;
+  } else if (options.valign === "bottom") {
+    y = boxHeight(box) - size.height - padding;
+  } else {
+    y = Math.ceil((boxHeight(box) - size.height) / 2);
+  }
+
+  return { x, y };
 }

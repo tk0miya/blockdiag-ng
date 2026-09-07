@@ -14,7 +14,7 @@
 // hold one uniform value.
 
 import type { GroupItem } from "../layout/related-nodes.js";
-import type { AnyGroup, Diagram } from "../model/elements.js";
+import type { AnyGroup, Diagram, DiagramNode } from "../model/elements.js";
 import type { Box, Size } from "./geometry.js";
 
 const CELL_SIZE = 8;
@@ -34,8 +34,11 @@ export interface DiagramMetrics {
   readonly rowHeights: ReadonlyMap<number, number>;
 }
 
-function collectAllNodes(group: AnyGroup): GroupItem[] {
-  const nodes: GroupItem[] = [];
+// Ported from `Diagram.traverse_nodes()`, restricted to actual drawable
+// nodes (`kind === "node"`, never a group) - also reused by
+// draw-diagram.ts to dispatch each node to its shape's renderer.
+export function collectAllNodes(group: AnyGroup): DiagramNode[] {
+  const nodes: DiagramNode[] = [];
   for (const node of group.nodes) {
     if (node.kind === "group") {
       nodes.push(...collectAllNodes(node));

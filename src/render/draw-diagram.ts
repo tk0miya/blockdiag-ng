@@ -1,12 +1,52 @@
 // Ported from `DiagramDraw` (vendor/blockdiag/src/blockdiag/drawer.py):
-// the entry point tying a laid-out `Diagram` to an SVG document. Only the
-// background skeleton so far - a box-shaped group's own background
-// rectangle (`_draw_background()`'s group loop). Node/edge shapes and
-// group borders/labels (`_draw_elements()`) are added in later steps,
-// once there's a shape to draw.
-import type { AnyGroup, Diagram, NodeGroup } from "../model/elements.js";
-import { createDiagramMetrics, type DiagramMetrics, marginBox, nodeBox, pageSize } from "./metrics.js";
+// the entry point tying a laid-out `Diagram` to an SVG document. Covers
+// background skeleton (`_draw_background()`'s group loop) plus node
+// rendering (`_draw_elements()`'s node loop, `DiagramDraw.node()`) for
+// the one shape ported so far (`box`). Node shadows (also part of
+// `_draw_background()`), edges, group borders/labels, and the rest of
+// the node shapes are added in later steps.
+import type { AnyGroup, Diagram, DiagramNode, NodeGroup } from "../model/elements.js";
+import type { Font } from "./font-metrics.js";
+import { collectAllNodes, createDiagramMetrics, type DiagramMetrics, marginBox, nodeBox, pageSize } from "./metrics.js";
+import { renderBoxNode } from "./shapes/box.js";
 import { SvgDocument } from "./svg-document.js";
+
+// Ported from `FontMap.fontsize`/`BASE_FONTSIZE`.
+const DEFAULT_FONT_SIZE = 11;
+
+// Ported from `noderenderer.get(shape)`: dispatches a node to its
+// shape's renderer. Only `box` is ported so far (Steps 14-16 add the
+// rest) - unlike the original, which would fail obscurely (`None` is not
+// callable) for a shape it doesn't recognize, this names the shape so
+// the gap is obvious while it's still a port-in-progress limitation
+// rather than a genuinely unknown shape.
+type NodeRenderer = (
+  doc: SvgDocument,
+  metrics: DiagramMetrics,
+  font: Font,
+  fontSize: number,
+  node: DiagramNode,
+) => void;
+
+const NODE_RENDERERS: Record<string, NodeRenderer> = {
+  box: renderBoxNode,
+};
+
+function drawNodes(
+  doc: SvgDocument,
+  metrics: DiagramMetrics,
+  diagram: Diagram,
+  font: Font,
+  defaultFontSize: number,
+): void {
+  for (const node of collectAllNodes(diagram)) {
+    const renderer = NODE_RENDERERS[node.shape];
+    if (renderer === undefined) {
+      throw new Error(`node shape not yet supported: ${node.shape}`);
+    }
+    renderer(doc, metrics, font, node.fontsize ?? defaultFontSize, node);
+  }
+}
 
 // Ported from `NodeGroup.traverse_groups(preorder=True)`, as used by
 // `DiagramDraw.groups`: every group nested anywhere in `group`, each one
@@ -33,11 +73,15 @@ function drawGroupBackgrounds(doc: SvgDocument, metrics: DiagramMetrics, diagram
   }
 }
 
-export function renderDiagramToSvg(diagram: Diagram): string {
+export function renderDiagramToSvg(
+  diagram: Diagram,
+  options: { readonly font: Font; readonly fontSize?: number },
+): string {
   const metrics = createDiagramMetrics(diagram);
   const doc = new SvgDocument();
 
   drawGroupBackgrounds(doc, metrics, diagram);
+  drawNodes(doc, metrics, diagram, options.font, options.fontSize ?? DEFAULT_FONT_SIZE);
 
   return doc.toString(pageSize(metrics, diagram.colwidth, diagram.colheight));
 }
