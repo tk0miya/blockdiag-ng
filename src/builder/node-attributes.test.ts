@@ -175,6 +175,17 @@ describe("applyNodeAttributes", () => {
     expect(node.shape).toBe("flowchart.database");
   });
 
+  it("accepts flowchart.condition, an alias registered by diamond's own setup() rather than its own entry point", () => {
+    // Not in setup.py's [blockdiag_noderenderer] entry points at all -
+    // noderenderer/diamond.py's setup() calls
+    // install_renderer('flowchart.condition', Diamond) alongside
+    // install_renderer('diamond', Diamond), found only by actually
+    // rendering through it (Step 15).
+    const node = newNode();
+    applyNodeAttributes(node, [attr("shape", "flowchart.condition")], noClasses);
+    expect(node.shape).toBe("flowchart.condition");
+  });
+
   it("sets stacked to true regardless of the attribute's value", () => {
     const node = newNode();
     applyNodeAttributes(node, [attr("stacked", null)], noClasses);

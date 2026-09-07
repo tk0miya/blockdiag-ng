@@ -9,6 +9,11 @@ import type { AnyGroup, Diagram, DiagramNode, NodeGroup } from "../model/element
 import type { Font } from "./font-metrics.js";
 import { collectAllNodes, createDiagramMetrics, type DiagramMetrics, marginBox, nodeBox, pageSize } from "./metrics.js";
 import { renderBoxNode } from "./shapes/box.js";
+import { renderCircleNode } from "./shapes/circle.js";
+import { renderDiamondNode } from "./shapes/diamond.js";
+import { renderDotsNode } from "./shapes/dots.js";
+import { renderEllipseNode } from "./shapes/ellipse.js";
+import { renderMinidiamondNode } from "./shapes/minidiamond.js";
 import { renderNoneNode } from "./shapes/none.js";
 import { renderRoundedboxNode } from "./shapes/roundedbox.js";
 import { renderSquareNode } from "./shapes/square.js";
@@ -19,11 +24,11 @@ import { SvgDocument } from "./svg-document.js";
 const DEFAULT_FONT_SIZE = 11;
 
 // Ported from `noderenderer.get(shape)`: dispatches a node to its
-// shape's renderer. Steps 15-16 add the rest - unlike the original,
-// which would fail obscurely (`None` is not callable) for a shape it
-// doesn't recognize, this names the shape so the gap is obvious while
-// it's still a port-in-progress limitation rather than a genuinely
-// unknown shape.
+// shape's renderer. Step 16 adds the rest - unlike the original, which
+// would fail obscurely (`None` is not callable) for a shape it doesn't
+// recognize, this names the shape so the gap is obvious while it's
+// still a port-in-progress limitation rather than a genuinely unknown
+// shape.
 type NodeRenderer = (
   doc: SvgDocument,
   metrics: DiagramMetrics,
@@ -38,6 +43,12 @@ const NODE_RENDERERS: Record<string, NodeRenderer> = {
   square: renderSquareNode,
   none: renderNoneNode,
   textbox: renderTextboxNode,
+  circle: renderCircleNode,
+  ellipse: renderEllipseNode,
+  diamond: renderDiamondNode,
+  "flowchart.condition": renderDiamondNode,
+  minidiamond: renderMinidiamondNode,
+  dots: renderDotsNode,
 };
 
 function drawNodes(
