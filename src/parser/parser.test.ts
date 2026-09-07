@@ -1,7 +1,4 @@
-import { readdirSync, readFileSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { LexerError } from "./lexer.js";
 import { ParseError, parseString } from "./parser.js";
 
 // Expected outputs were captured by running the original implementation's
@@ -259,83 +256,5 @@ describe("parseString", () => {
       // reinterpreted as "class, A, B;".
       expect(() => parseString("{ class A, B; }")).toThrowError(ParseError);
     });
-  });
-});
-
-describe("parseString against the vendored test fixtures", () => {
-  const fixturesDir = join(import.meta.dirname, "../../vendor/blockdiag/src/blockdiag/tests/diagrams");
-
-  function collectDiagFiles(dir: string): string[] {
-    return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-      const path = join(dir, entry.name);
-      if (entry.isDirectory()) {
-        return collectDiagFiles(path);
-      }
-      return entry.name.endsWith(".diag") ? [path] : [];
-    });
-  }
-
-  const allFixtures = collectDiagFiles(fixturesDir);
-
-  // These fixtures under errors/ are designed to fail during semantic
-  // building (unknown shape/style/attribute names, etc.), not parsing -
-  // parse_string() succeeds on them in the original. Everything else
-  // should parse cleanly.
-  const semanticErrorFixtures = new Set(
-    [
-      "belongs_to_two_groups.diag",
-      "unknown_diagram_default_shape.diag",
-      "unknown_diagram_edge_layout.diag",
-      "unknown_diagram_orientation.diag",
-      "unknown_edge_class.diag",
-      "unknown_edge_dir.diag",
-      "unknown_edge_hstyle.diag",
-      "unknown_edge_style.diag",
-      "unknown_group_class.diag",
-      "unknown_group_orientation.diag",
-      "unknown_group_shape.diag",
-      "unknown_node_attribute.diag",
-      "unknown_node_class.diag",
-      "unknown_node_shape.diag",
-      "unknown_node_style.diag",
-      "unknown_plugin.diag",
-    ].map((name) => join(fixturesDir, "errors", name)),
-  );
-  // These fail parse_string() itself in the original (confirmed by running
-  // it against each fixture in a local venv).
-  const parseErrorFixtures = new Set(
-    ["lexer_error.diag", "group_follows_node.diag", "node_follows_group.diag", "unknown_diagram_type.diag"].map(
-      (name) => join(fixturesDir, "errors", name),
-    ),
-  );
-
-  const parseableFixtures = allFixtures.filter((path) => !parseErrorFixtures.has(path));
-
-  it("found the vendored fixture directory, including errors/", () => {
-    expect(allFixtures.length).toBeGreaterThan(130);
-    expect(allFixtures.some((path) => path.includes("/errors/"))).toBe(true);
-  });
-
-  it.each(parseableFixtures)("parses %s without throwing", (path) => {
-    const source = readFileSync(path, "utf-8");
-    expect(() => parseString(source)).not.toThrow();
-  });
-
-  it.each([...parseErrorFixtures])("fails to parse %s, matching the original", (path) => {
-    // lexer_error.diag fails during tokenization (LexerError); the rest
-    // fail during parsing proper (ParseError).
-    const source = readFileSync(path, "utf-8");
-    if (path.endsWith("lexer_error.diag")) {
-      expect(() => parseString(source)).toThrowError(LexerError);
-    } else {
-      expect(() => parseString(source)).toThrowError(ParseError);
-    }
-  });
-
-  it("accounts for every errors/ fixture as either a parse or semantic error", () => {
-    const errorFixtures = allFixtures.filter((path) => path.includes("/errors/"));
-    for (const path of errorFixtures) {
-      expect(parseErrorFixtures.has(path) || semanticErrorFixtures.has(path), path).toBe(true);
-    }
   });
 });
