@@ -77,7 +77,26 @@ describe("SvgDocument", () => {
   });
 
   describe("line", () => {
-    it("draws a polyline as a path", () => {
+    // A multi-point line becomes one <path> per consecutive pair of
+    // points, not one path with multiple segments - verified against
+    // the original (see line()'s own comment on why: the `linejump`
+    // filter that always wraps its real drawer splits every line()
+    // call this way).
+    it("draws a 2-point line as one path", () => {
+      const doc = new SvgDocument();
+      doc.line(
+        [
+          { x: 0, y: 0 },
+          { x: 10, y: 0 },
+        ],
+        { fill: [0, 0, 0] },
+      );
+      expect(doc.toString({ width: 20, height: 20 })).toContain(
+        '<path d="M 0 0 L 10 0" fill="none" stroke="rgb(0,0,0)"/>',
+      );
+    });
+
+    it("draws a 3-point line as two separate paths, not one combined path", () => {
       const doc = new SvgDocument();
       doc.line(
         [
@@ -87,14 +106,21 @@ describe("SvgDocument", () => {
         ],
         { fill: [0, 0, 0] },
       );
-      expect(doc.toString({ width: 20, height: 20 })).toContain(
-        '<path d="M 0 0 L 10 0 L 10 10" fill="none" stroke="rgb(0,0,0)"/>',
-      );
+      const output = doc.toString({ width: 20, height: 20 });
+      expect(output).toContain('<path d="M 0 0 L 10 0" fill="none" stroke="rgb(0,0,0)"/>');
+      expect(output).toContain('<path d="M 10 0 L 10 10" fill="none" stroke="rgb(0,0,0)"/>');
+      expect(output).not.toContain("L 10 0 L 10 10");
     });
 
     it("draws nothing for an empty point list", () => {
       const doc = new SvgDocument();
       doc.line([], { fill: [0, 0, 0] });
+      expect(doc.toString({ width: 20, height: 20 })).not.toContain("<path");
+    });
+
+    it("draws nothing for a single-point line", () => {
+      const doc = new SvgDocument();
+      doc.line([{ x: 0, y: 0 }], { fill: [0, 0, 0] });
       expect(doc.toString({ width: 20, height: 20 })).not.toContain("<path");
     });
 
