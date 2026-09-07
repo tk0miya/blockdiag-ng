@@ -45,6 +45,12 @@ describe("SvgDocument", () => {
         '<ellipse cx="50" cy="20" rx="50" ry="20" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
       );
     });
+
+    it("adds a stroke-dasharray for a dotted style", () => {
+      const doc = new SvgDocument();
+      doc.ellipse({ x1: 0, y1: 0, x2: 100, y2: 40 }, { outline: [0, 0, 0], style: { type: "dotted" } });
+      expect(doc.toString({ width: 100, height: 40 })).toContain('stroke-dasharray="2"');
+    });
   });
 
   describe("polygon", () => {
@@ -73,6 +79,18 @@ describe("SvgDocument", () => {
         { fill: [0, 0, 0] },
       );
       expect(doc.toString({ width: 20, height: 20 })).toContain('points="0,0 10,0"');
+    });
+
+    it("adds a stroke-dasharray for a dashed style", () => {
+      const doc = new SvgDocument();
+      doc.polygon(
+        [
+          { x: 0, y: 0 },
+          { x: 10, y: 0 },
+        ],
+        { outline: [0, 0, 0], style: { type: "dashed" } },
+      );
+      expect(doc.toString({ width: 20, height: 20 })).toContain('stroke-dasharray="4"');
     });
   });
 

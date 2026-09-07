@@ -8,7 +8,12 @@
 // box, roundedbox, square, none, textbox (rectangular); circle, ellipse,
 // diamond, minidiamond, dots (geometric); cloud, note, mail, actor,
 // beginpoint, endpoint (special notation); and the namespaced
-// flowchart.database/input/loopin/loopout/terminator shapes.
+// flowchart.database/input/loopin/loopout/terminator shapes. Also
+// `flowchart.condition`, which isn't its own entry point - it's
+// registered as a side effect of `diamond`'s own `setup()` (`noderenderer/
+// diamond.py` calls `install_renderer('flowchart.condition', Diamond)`
+// right alongside `'diamond'` itself), found only by actually rendering
+// through it in Step 15.
 import { AttributeError } from "./attributes.js";
 
 const NODE_SHAPES: ReadonlySet<string> = new Set([
@@ -21,6 +26,7 @@ const NODE_SHAPES: ReadonlySet<string> = new Set([
   "dots",
   "ellipse",
   "endpoint",
+  "flowchart.condition",
   "flowchart.database",
   "flowchart.input",
   "flowchart.loopin",

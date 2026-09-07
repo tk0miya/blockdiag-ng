@@ -99,4 +99,54 @@ describe("renderDiagramToSvg", () => {
     );
     expect(output).toContain(">Hi<");
   });
+
+  it("draws a circle sized to just enclose the node's own box", () => {
+    const output = svg('diagram { A [shape = circle, label = "Hi"]; }');
+    expect(output).toContain('<ellipse cx="128" cy="60" rx="24" ry="24" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws an ellipse filling the node's whole cell", () => {
+    const output = svg('diagram { A [shape = ellipse, label = "Hi"]; }');
+    expect(output).toContain('<ellipse cx="128" cy="60" rx="64" ry="20" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws a diamond extending past the node's own box, with an inset label", () => {
+    const output = svg('diagram { A [shape = diamond, label = "Hi"]; }');
+    expect(output).toContain(
+      '<polygon points="128,32 200,60 128,88 56,60 128,32" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws a diamond for the flowchart.condition alias too", () => {
+    const output = svg('diagram { A [shape = flowchart.condition, label = "Hi"]; }');
+    expect(output).toContain(
+      '<polygon points="128,32 200,60 128,88 56,60 128,32" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+  });
+
+  it("draws a small fixed-size diamond marker with its label to the right", () => {
+    const output = svg('diagram { A [shape = minidiamond, label = "Hi"]; }');
+    expect(output).toContain(
+      '<polygon points="128,52 136,60 128,68 120,60 128,52" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws three dots through the node's center in a landscape group, and no label", () => {
+    const output = svg('diagram { A [shape = dots, label = "hidden"]; }');
+    expect(output).not.toContain("hidden");
+    expect(output).toContain('<ellipse cx="128" cy="60" rx="4" ry="4" fill="rgb(0,0,0)" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain('<ellipse cx="128" cy="40" rx="4" ry="4" fill="rgb(0,0,0)" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain('<ellipse cx="128" cy="80" rx="4" ry="4" fill="rgb(0,0,0)" stroke="rgb(0,0,0)"/>');
+  });
+
+  it("spaces dots horizontally in a portrait group", () => {
+    const output = svg("diagram { orientation = portrait; A [shape = dots]; }");
+    expect(output).toContain('cx="128"');
+    expect(output).toContain('cx="85.33333333333334"');
+    expect(output).toContain('cx="170.66666666666666"');
+  });
 });
