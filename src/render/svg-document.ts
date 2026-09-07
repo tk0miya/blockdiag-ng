@@ -106,23 +106,30 @@ export class SvgDocument {
     );
   }
 
-  // Ported from `line()`: a polyline drawn as an SVG path (`fill="none"`,
-  // just a stroked outline), matching the original's own choice to
-  // render every line - straight or jumped-over-a-crossing - as a path.
+  // Ported from `line()` - by way of the `linejump` filter that always
+  // wraps the original's real drawer (`DiagramDraw.__init__`'s
+  // `filters=['linejump']`), which is what actually receives every
+  // `line()` call: it splits a multi-point line into one two-point
+  // `line()` per consecutive pair (tracking crossing-jump points along
+  // the way when `jump=True`, which nothing here passes yet), rather
+  // than the plain multi-segment path `SVGImageDrawElement.line()`
+  // alone would draw. So a 3-point line becomes two separate `<path>`
+  // elements, not one.
   line(
     points: readonly Point[],
     options: { readonly fill: Color; readonly thick?: number | null; readonly style?: LineStyle | null },
   ): void {
-    const [first, ...rest] = points;
-    if (first === undefined) return;
     const dasharray = svgDasharray(options.style ?? null, options.thick ?? null);
-    const path = [`M ${first.x} ${first.y}`, ...rest.map((p) => `L ${p.x} ${p.y}`)].join(" ");
-    this.elements.push(
-      `<path d="${path}" fill="none" stroke="${cssColor(options.fill)}"` +
-        (options.thick != null ? ` stroke-width="${options.thick}"` : "") +
-        (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
-        `/>`,
-    );
+    for (let i = 0; i < points.length - 1; i++) {
+      const start = points[i];
+      const end = points[i + 1];
+      this.elements.push(
+        `<path d="M ${start.x} ${start.y} L ${end.x} ${end.y}" fill="none" stroke="${cssColor(options.fill)}"` +
+          (options.thick != null ? ` stroke-width="${options.thick}"` : "") +
+          (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
+          `/>`,
+      );
+    }
   }
 
   // Ported from `text()`. The original also emits `font-family`/
