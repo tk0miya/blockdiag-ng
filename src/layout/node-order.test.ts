@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { buildDiagram } from "../builder/tree-builder.js";
 import type { Diagram, DiagramNode } from "../model/elements.js";
 import { parseString } from "../parser/parser.js";
-import { layoutDiagram } from "./node-placement.js";
+import { layoutDiagram } from "./group-layout.js";
 
 // Expected node order and coordinates were captured by running the
 // original implementation's DiagramLayoutManager.do_layout()

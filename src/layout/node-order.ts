@@ -4,8 +4,7 @@
 // diagrams only: `adjust_node_order()`'s `isinstance(node, NodeGroup)`
 // branch (reordering a group's own children) is deferred to a later,
 // group-aware layout step.
-import type { DiagramEdge } from "../model/elements.js";
-import { type GroupItem, getChildNodes, getParentNodes } from "./related-nodes.js";
+import { type GroupItem, getChildNodes, getParentNodes, type RelatedEdge } from "./related-nodes.js";
 
 function arraysEqual(a: readonly GroupItem[], b: readonly GroupItem[]): boolean {
   return a.length === b.length && a.every((node, i) => node === b[i]);
@@ -27,7 +26,7 @@ function removeFirstMatch(circulars: GroupItem[][], target: readonly GroupItem[]
 function detectCircularsSub(
   node: GroupItem,
   parents: readonly GroupItem[],
-  edges: readonly DiagramEdge[],
+  edges: readonly RelatedEdge[],
   circulars: GroupItem[][],
 ): void {
   for (const child of getChildNodes(node, edges)) {
@@ -47,7 +46,7 @@ function detectCircularsSub(
 // starting nodes can describe overlapping loops through a shared node -
 // the cleanup pass below merges any pair that intersects into one
 // (dropping either that turns out to be wholly contained in the other).
-export function detectCirculars(nodes: readonly GroupItem[], edges: readonly DiagramEdge[]): GroupItem[][] {
+export function detectCirculars(nodes: readonly GroupItem[], edges: readonly RelatedEdge[]): GroupItem[][] {
   const circulars: GroupItem[][] = [];
   for (const node of nodes) {
     if (!circulars.some((c) => c.includes(node))) {
@@ -89,7 +88,7 @@ export function isCircularRef(
   node1: GroupItem,
   node2: GroupItem,
   circulars: readonly GroupItem[][],
-  edges: readonly DiagramEdge[],
+  edges: readonly RelatedEdge[],
 ): boolean {
   for (const circular of circulars) {
     if (!circular.includes(node1) || !circular.includes(node2)) {
@@ -151,7 +150,7 @@ function moveAfter(nodes: GroupItem[], movedIndex: number, anchorIndex: number):
 // adjacent in the array that ultimately drives y-position assignment.
 export function adjustNodeOrder(
   nodes: GroupItem[],
-  edges: readonly DiagramEdge[],
+  edges: readonly RelatedEdge[],
   circulars: readonly GroupItem[][],
 ): void {
   for (const node of [...nodes]) {
