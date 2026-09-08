@@ -4,8 +4,9 @@
 // `render_shape_outline` build the same look out of ellipses and
 // rectangles instead, for raster backends with no path support; this
 // port only ever targets SVG, so that alternate, more complex path
-// isn't ported. `icon` narrows the label the same way as box.ts (see
-// icon.ts); a `background` image is deferred to a later step.
+// isn't ported. `icon` narrows the label/background the same way as
+// box.ts (see icon.ts); a `background` image draws over the shape's own
+// fill and under its outline (so the outline stays crisp on top of it).
 import type { DiagramNode } from "../../model/elements.js";
 import type { Box } from "../geometry.js";
 import { textBoxFor } from "../icon.js";
@@ -45,7 +46,14 @@ export function renderRoundedboxNode(
     return;
   }
 
-  doc.path(roundedRectPath(box, metrics.cellSize), { fill: node.color, outline: node.linecolor, style: node.style });
+  const path = roundedRectPath(box, metrics.cellSize);
+  if (node.background !== null) {
+    doc.path(path, { fill: node.color, outline: node.color });
+    doc.image(textBoxFor(metrics, node, box), node.background);
+    doc.path(path, { outline: node.linecolor, style: node.style });
+  } else {
+    doc.path(path, { fill: node.color, outline: node.linecolor, style: node.style });
+  }
   if (node.label !== null) {
     doc.textarea(textBoxFor(metrics, node, box), node.label, mode.font, mode.fontSize, {
       fill: node.textcolor,

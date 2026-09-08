@@ -2,7 +2,9 @@
 // folded down and inward, like a sticky note. Plus its shadow branch -
 // the fold-crease line is skipped for shadow, same as the flap in
 // mail.ts. `icon` narrows the label the same way as box.ts (see
-// icon.ts); a background image is deferred to a later step.
+// icon.ts). Plus a `background` image, drawn into the shape's own full
+// box (not narrowed for `icon`, matching the original), over its own
+// fill and under its outline (so the outline stays crisp on top of it).
 import type { DiagramNode } from "../../model/elements.js";
 import type { Point } from "../geometry.js";
 import { boxBottomLeft, boxBottomRight, boxTopLeft, boxTopRight } from "../geometry.js";
@@ -30,7 +32,13 @@ export function renderNoteNode(doc: SvgDocument, metrics: DiagramMetrics, node: 
     return;
   }
 
-  doc.polygon(note, { fill: node.color, outline: node.linecolor, style: node.style });
+  if (node.background !== null) {
+    doc.polygon(note, { fill: node.color, outline: node.color });
+    doc.image(box, node.background);
+    doc.polygon(note, { outline: node.linecolor, style: node.style });
+  } else {
+    doc.polygon(note, { fill: node.color, outline: node.linecolor, style: node.style });
+  }
   doc.line([foldStart, { x: foldStart.x, y: foldCorner.y }, foldCorner], {
     fill: node.linecolor,
     style: node.style,
