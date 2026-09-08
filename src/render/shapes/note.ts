@@ -1,10 +1,12 @@
 // Ported from `noderenderer/note.py`: a box with its top-right corner
 // folded down and inward, like a sticky note. Plus its shadow branch -
 // the fold-crease line is skipped for shadow, same as the flap in
-// mail.ts. A background image is deferred to Step 17c, same as box.ts.
+// mail.ts. `icon` narrows the label the same way as box.ts (see
+// icon.ts); a background image is deferred to a later step.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Point } from "../geometry.js";
 import { boxBottomLeft, boxBottomRight, boxTopLeft, boxTopRight } from "../geometry.js";
+import { textBoxFor } from "../icon.js";
 import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
 import type { RenderMode } from "../render-mode.js";
@@ -35,6 +37,9 @@ export function renderNoteNode(doc: SvgDocument, metrics: DiagramMetrics, node: 
   });
 
   if (node.label !== null) {
-    doc.textarea(box, node.label, mode.font, mode.fontSize, { fill: node.textcolor, halign: "center" });
+    doc.textarea(textBoxFor(metrics, node, box), node.label, mode.font, mode.fontSize, {
+      fill: node.textcolor,
+      halign: "center",
+    });
   }
 }

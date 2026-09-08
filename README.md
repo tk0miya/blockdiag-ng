@@ -52,3 +52,20 @@ code that makes them; this list is a summary.
 - **A bare `label;` attribute (no value) no longer crashes when
   rendered** (`src/render/shapes/box.ts`). It renders as no label at
   all; the original crashes trying to render one instead.
+
+- **`icon` only supports `.jpg`/`.jpeg`/`.png`/`.gif` files, read
+  directly from their own file path** (`src/render/images.ts`). This one
+  isn't a bug fix like the others above - the original reads any image
+  format Pillow can decode, re-encoding anything else into an embedded
+  PNG first; that full decode/re-encode pipeline is out of scope for
+  this SVG-only port, which only ever references a file by path.
+
+- **A node's `icon` can end up drawn on top of its own label instead of
+  underneath it** (`src/render/draw-diagram.ts`), for the (uncommon, but
+  not enforced against) combination of a shape that doesn't narrow its
+  own label to avoid the icon - every shape except `box`/`roundedbox`/
+  `textbox`/`note` - with a label wide enough to actually overlap the
+  icon. Not a bug fix either: the original always draws a shape's fill,
+  then its icon, then its label, one at a time; this port draws each
+  shape's fill and label together, in one call, so the icon (drawn right
+  after) ends up on top of the label instead of underneath it.
