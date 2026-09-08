@@ -439,4 +439,104 @@ describe("renderDiagramToSvg", () => {
       expect(output).not.toContain("<image");
     });
   });
+
+  // Expected values here are derived from the metrics/background formulas
+  // directly (see each shape's own file), not captured from a live
+  // Python run like the rest of this file - same as the "icon" cases
+  // above.
+  describe("background", () => {
+    // Unlike `icon` (icon.ts), every shape here but `textbox` just
+    // stretches the image into its own existing box - via the SVG
+    // `<image>` element's own width/height, the same way any browser
+    // stretches an <img> to a given size - rather than scaling it down
+    // to fit first. So the resulting <image> is always exactly that
+    // box's own size, regardless of the source image's real dimensions.
+    it("draws a box node's background image, stretched to its own box, over its own fill and under its outline", () => {
+      const output = svg(`diagram { A [label = "Hi", background = "${ICON_PATH}"]; }`);
+      const fillIndex = output.indexOf(
+        '<rect x="64" y="40" width="128" height="40" fill="rgb(255,255,255)" stroke="rgb(255,255,255)"/>',
+      );
+      const imageIndex = output.indexOf(`<image x="64" y="40" width="128" height="40" xlink:href="${ICON_PATH}"/>`);
+      const outlineIndex = output.indexOf(
+        '<rect x="64" y="40" width="128" height="40" fill="none" stroke="rgb(0,0,0)"/>',
+      );
+      expect(fillIndex).toBeGreaterThanOrEqual(0);
+      expect(imageIndex).toBeGreaterThan(fillIndex);
+      expect(outlineIndex).toBeGreaterThan(imageIndex);
+    });
+
+    it("stretches a box node's background image to the same box regardless of the source image's own size", () => {
+      const output = svg(`diagram { A [label = "Hi", background = "${LARGE_ICON_PATH}"]; }`);
+      expect(output).toContain(`<image x="64" y="40" width="128" height="40" xlink:href="${LARGE_ICON_PATH}"/>`);
+    });
+
+    it("draws a circle node's background image into its own (larger) textbox", () => {
+      const output = svg(`diagram { A [shape = circle, label = "Hi", background = "${ICON_PATH}"]; }`);
+      expect(output).toContain(`<image x="104" y="36" width="48" height="48" xlink:href="${ICON_PATH}"/>`);
+    });
+
+    it("draws a square node's background image the same way as circle", () => {
+      const output = svg(`diagram { A [shape = square, label = "Hi", background = "${ICON_PATH}"]; }`);
+      expect(output).toContain(`<image x="104" y="36" width="48" height="48" xlink:href="${ICON_PATH}"/>`);
+    });
+
+    it("draws an ellipse node's background image into its narrower inset box", () => {
+      const output = svg(`diagram { A [shape = ellipse, label = "Hi", background = "${ICON_PATH}"]; }`);
+      expect(output).toContain(`<image x="72" y="48" width="112" height="24" xlink:href="${ICON_PATH}"/>`);
+    });
+
+    it("draws a diamond node's background image into its inset box", () => {
+      const output = svg(`diagram { A [shape = diamond, label = "Hi", background = "${ICON_PATH}"]; }`);
+      expect(output).toContain(`<image x="92" y="46" width="72" height="28" xlink:href="${ICON_PATH}"/>`);
+    });
+
+    it("draws a mail node's background image below its flap", () => {
+      const output = svg(`diagram { A [shape = mail, label = "Hi", background = "${ICON_PATH}"]; }`);
+      expect(output).toContain(`<image x="64" y="56" width="128" height="24" xlink:href="${ICON_PATH}"/>`);
+    });
+
+    it("draws a note node's background image into its own full box", () => {
+      const output = svg(`diagram { A [shape = note, label = "Hi", background = "${ICON_PATH}"]; }`);
+      expect(output).toContain(`<image x="64" y="40" width="128" height="40" xlink:href="${ICON_PATH}"/>`);
+    });
+
+    it("draws a cloud node's background image into its own inset box", () => {
+      const output = svg(`diagram { A [shape = cloud, label = "Hi", background = "${ICON_PATH}"]; }`);
+      expect(output).toContain(`<image x="84" y="48" width="90" height="24" xlink:href="${ICON_PATH}"/>`);
+    });
+
+    it("draws a roundedbox node's background image the same way as box", () => {
+      const output = svg(`diagram { A [shape = roundedbox, label = "Hi", background = "${ICON_PATH}"]; }`);
+      expect(output).toContain(`<image x="64" y="40" width="128" height="40" xlink:href="${ICON_PATH}"/>`);
+    });
+
+    it("shrinks a textbox node's own label box to fit its background image", () => {
+      // Unlike every other shape, textbox resizes its own textbox to the
+      // (possibly scaled-down) image's size, centered within whatever
+      // it would otherwise be - rather than drawing the image into a
+      // fixed-size box.
+      const output = svg(`diagram { A [shape = textbox, label = "Hi", background = "${ICON_PATH}"]; }`);
+      expect(output).toContain(`<image x="112" y="52" width="32" height="16" xlink:href="${ICON_PATH}"/>`);
+    });
+
+    it("shrinks a textbox node's label box to the scaled-down size of a too-large background image", () => {
+      const output = svg(`diagram { A [shape = textbox, label = "Hi", background = "${LARGE_ICON_PATH}"]; }`);
+      expect(output).toContain(`<image x="88" y="40" width="80" height="40" xlink:href="${LARGE_ICON_PATH}"/>`);
+    });
+
+    it("composes a textbox node's icon and background, narrowing for the icon first", () => {
+      // The icon narrows the box to (96, 40)-(192, 80) first (as in the
+      // "icon" cases above); the background then resizes within that
+      // already-narrowed box, not the node's own full one.
+      const output = svg(
+        `diagram { A [shape = textbox, label = "Hi", icon = "${ICON_PATH}", background = "${ICON_PATH}"]; }`,
+      );
+      expect(output).toContain(`<image x="128" y="52" width="32" height="16" xlink:href="${ICON_PATH}"/>`);
+    });
+
+    it("draws no background image for a node without a background attribute", () => {
+      const output = svg('diagram { A [label = "Hi"]; }');
+      expect(output).not.toContain("<image");
+    });
+  });
 });

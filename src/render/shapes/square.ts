@@ -3,8 +3,9 @@
 // override - `r` is derived from the diagram-wide default node size,
 // not the node's own (verified against the original: `A [shape =
 // square, width = 300]` renders the same 48x48 square as plain `A`).
-// Plus its shadow branch. A background image is deferred to a later step,
-// same as box.ts.
+// Plus its shadow branch and a `background` image, drawn over the
+// shape's own fill and under its outline (so the outline stays crisp on
+// top of it).
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
 import type { Box } from "../geometry.js";
@@ -33,7 +34,13 @@ export function renderSquareNode(
     return;
   }
 
-  doc.rectangle(box, { fill: node.color, outline: node.linecolor, style: node.style });
+  if (node.background !== null) {
+    doc.rectangle(box, { fill: node.color, outline: node.color });
+    doc.image(box, node.background);
+    doc.rectangle(box, { outline: node.linecolor, style: node.style });
+  } else {
+    doc.rectangle(box, { fill: node.color, outline: node.linecolor, style: node.style });
+  }
   if (node.label !== null) {
     doc.textarea(box, node.label, font, fontSize, { fill: node.textcolor, halign: "center" });
   }
