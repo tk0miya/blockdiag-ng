@@ -3,7 +3,7 @@
 // and right ends), plus its shadow branch. Like
 // `roundedbox`/`cloud`/`database`, the original's alternate raster
 // `render_shape`/`render_shape_background` is out of scope for an
-// SVG-only port. A background image is deferred to Step 17c, same as
+// SVG-only port. A background image is deferred to a later step, same as
 // box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Box } from "../geometry.js";

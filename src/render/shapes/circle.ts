@@ -2,7 +2,7 @@
 // the node's own box (its radius grows with whichever of the box's own
 // width/height is smaller - unlike `square`, which always uses the
 // diagram-wide default size regardless of the node's own box). Plus its
-// shadow branch. A background image is deferred to Step 17c, same as
+// shadow branch. A background image is deferred to a later step, same as
 // box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Box } from "../geometry.js";

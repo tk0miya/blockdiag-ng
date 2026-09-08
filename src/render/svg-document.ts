@@ -25,6 +25,15 @@ function escapeXmlText(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// `&`/`<` are escaped the same as `escapeXmlText()` (both are disallowed
+// in either an attribute value or element text content), but an
+// attribute value (so far, only `image()`'s file path) additionally
+// needs its own quote escaped, since it sits inside one - unlike `>`,
+// which `escapeXmlText()` escapes but this doesn't need to.
+function escapeXmlAttr(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
+}
+
 // Ported from `svg.py`'s module-level `style()`: the CSS behind a
 // group's background blur (`"blur"`) or a node's shadow blur
 // (`"transp-blur"` - the same blur, plus some transparency so an
@@ -162,6 +171,18 @@ export class SvgDocument {
         (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
         (style !== "" ? ` style="${style}"` : "") +
         `/>`,
+    );
+  }
+
+  // Ported from `image()`: embeds an icon by referencing its own file
+  // path directly, rather than the original's `data:;base64,...` embed -
+  // out of scope for this port, see images.ts's own header comment on
+  // why (and which formats fall back to it there, that this doesn't
+  // support at all).
+  image(box: Box, path: string): void {
+    this.elements.push(
+      `<image x="${box.x1}" y="${box.y1}" width="${boxWidth(box)}" height="${boxHeight(box)}"` +
+        ` xlink:href="${escapeXmlAttr(path)}"/>`,
     );
   }
 
