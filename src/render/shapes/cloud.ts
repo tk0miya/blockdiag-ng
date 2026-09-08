@@ -3,7 +3,9 @@
 // arcs), plus its shadow branch. Like `roundedbox`, the original's
 // alternate raster `render_shape`/`render_shape_background`
 // (composited ellipses and rectangles) is out of scope for an SVG-only
-// port. A background image is deferred to a later step, same as box.ts.
+// port. Plus a `background` image, drawn into the same inset box as the
+// label, over the cloud's own fill and under its outline (so the
+// outline stays crisp on top of it).
 import type { DiagramNode } from "../../model/elements.js";
 import type { Box, Point } from "../geometry.js";
 import { boxTopLeft } from "../geometry.js";
@@ -43,15 +45,23 @@ export function renderCloudNode(doc: SvgDocument, metrics: DiagramMetrics, node:
     return;
   }
 
-  doc.path(cloudPath(topLeft, rx, ry), { fill: node.color, outline: node.linecolor, style: node.style });
+  const path = cloudPath(topLeft, rx, ry);
+  const textBox: Box = {
+    x1: topLeft.x + rx * 2,
+    y1: topLeft.y + ry,
+    x2: topLeft.x + rx * 11,
+    y2: topLeft.y + ry * 4,
+  };
+
+  if (node.background !== null) {
+    doc.path(path, { fill: node.color, outline: node.color });
+    doc.image(textBox, node.background);
+    doc.path(path, { outline: node.linecolor, style: node.style });
+  } else {
+    doc.path(path, { fill: node.color, outline: node.linecolor, style: node.style });
+  }
 
   if (node.label !== null) {
-    const textBox: Box = {
-      x1: topLeft.x + rx * 2,
-      y1: topLeft.y + ry,
-      x2: topLeft.x + rx * 11,
-      y2: topLeft.y + ry * 4,
-    };
     doc.textarea(textBox, node.label, mode.font, mode.fontSize, { fill: node.textcolor, halign: "center" });
   }
 }

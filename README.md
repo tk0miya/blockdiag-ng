@@ -53,12 +53,13 @@ code that makes them; this list is a summary.
   rendered** (`src/render/shapes/box.ts`). It renders as no label at
   all; the original crashes trying to render one instead.
 
-- **`icon` only supports `.jpg`/`.jpeg`/`.png`/`.gif` files, read
-  directly from their own file path** (`src/render/images.ts`). This one
-  isn't a bug fix like the others above - the original reads any image
-  format Pillow can decode, re-encoding anything else into an embedded
-  PNG first; that full decode/re-encode pipeline is out of scope for
-  this SVG-only port, which only ever references a file by path.
+- **`icon`/`background` only support `.jpg`/`.jpeg`/`.png`/`.gif` files,
+  read directly from their own file path** (`src/render/images.ts`).
+  This one isn't a bug fix like the others above - the original reads
+  any image format Pillow can decode, re-encoding anything else into an
+  embedded PNG first; that full decode/re-encode pipeline is out of
+  scope for this SVG-only port, which only ever references a file by
+  path.
 
 - **A node's `icon` can end up drawn on top of its own label instead of
   underneath it** (`src/render/draw-diagram.ts`), for the (uncommon, but
