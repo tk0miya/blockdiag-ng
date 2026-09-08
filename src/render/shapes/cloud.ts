@@ -3,7 +3,7 @@
 // arcs), plus its shadow branch. Like `roundedbox`, the original's
 // alternate raster `render_shape`/`render_shape_background`
 // (composited ellipses and rectangles) is out of scope for an SVG-only
-// port. A background image is deferred to Step 17c, same as box.ts.
+// port. A background image is deferred to a later step, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Box, Point } from "../geometry.js";
 import { boxTopLeft } from "../geometry.js";

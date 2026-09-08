@@ -4,7 +4,7 @@
 // narrower inset box instead, so it doesn't run into the ellipse's own
 // curve. Plus its shadow branch (the full cell box shifted, same as the
 // ellipse itself - not the label's narrower inset box). A background
-// image is deferred to Step 17c, same as box.ts.
+// image is deferred to a later step, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Box } from "../geometry.js";
 import type { DiagramMetrics } from "../metrics.js";
