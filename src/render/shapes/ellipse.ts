@@ -4,7 +4,7 @@
 // narrower inset box instead, so it doesn't run into the ellipse's own
 // curve. Plus its shadow branch (the full cell box shifted, same as the
 // ellipse itself - not the label's narrower inset box). A background
-// image is deferred to Step 17c, same as box.ts.
+// image is deferred to a later step, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
 import type { Box } from "../geometry.js";
@@ -40,7 +40,10 @@ export function renderEllipseNode(
 }
 
 // `getConnectors` is `null` - ellipse inherits the plain box default,
-// same as box.ts. `getTextBox` is `null` for now too, though its own
-// inset textbox (computed inline above) becomes its own getTextBox once
-// icon.ts exists (Step 17c).
+// same as box.ts. `getTextBox` stays `null` too: `ellipse.py` always
+// overrides `self.textbox` unconditionally (its own inset rectangle,
+// computed inline above), so unlike box/roundedbox/textbox/note it
+// never narrows for an `icon` - icon.ts existing doesn't unblock this.
+// It gets a real getTextBox once connectors.ts exists (Step 18a), at
+// the same time as its own getConnectors.
 export const ellipseShape: NodeShape = { render: renderEllipseNode, getConnectors: null, getTextBox: null };

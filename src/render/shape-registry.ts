@@ -9,7 +9,10 @@
 // `node` on every call rather than caching it once in a constructor.
 // They're required fields (not optional) so a shape must say explicitly
 // whether it customizes them or falls back to the plain box default
-// (`null`) - added once connectors.ts/icon.ts exist, in later steps.
+// (`null`). `getConnectors` stays `null` for every shape until
+// connectors.ts exists (Step 18a); `getTextBox` already has a real
+// implementation for the shapes that narrow for an `icon` (icon.ts,
+// Step 17c) - see each shape's own file for which one it is.
 // See shapes/index.ts for the current roster of registered shapes.
 //
 // Unlike the original, which resolves shapes at runtime via

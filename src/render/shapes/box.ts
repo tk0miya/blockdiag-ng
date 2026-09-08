@@ -1,15 +1,18 @@
 // Ported from `noderenderer/box.py`'s `Box` shape: `render_shape`'s
 // common case (fill/outline/style) plus the base `NodeShape`'s
 // `render_label`, plus its shadow branch (shifted, flat-colored, no
-// label - see render-mode.ts). The number badge (`numbered`) is
-// shape-independent, so it's wired up once in draw-diagram.ts
-// (number-badge.ts) rather than here. A `background` image and
-// `render_icon`/`stacked` are deferred to Steps 17c-17d, a horizontal
-// slice across every shape rather than something specific to `box`.
-// `rotate`/`label_orientation = "vertical"` are deferred too (see
+// label - see render-mode.ts). The number badge (`numbered`) and `icon`
+// are shape-independent, so they're wired up once in draw-diagram.ts
+// (number-badge.ts/icon.ts) rather than here - `box` only narrows its
+// own label to leave room for an icon (icon.ts's `textBoxFor()`), since
+// it's one of the few shapes that doesn't already override its own
+// textbox unconditionally (see icon.ts). A `background` image and
+// `stacked` are deferred to later steps. `rotate`/
+// `label_orientation = "vertical"` are deferred too (see
 // text-folder.ts/svg-document.ts).
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
+import { textBoxFor } from "../icon.js";
 import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
 import type { RenderMode } from "../render-mode.js";
@@ -38,11 +41,20 @@ export function renderBoxNode(
   // than an empty string - the original crashes trying to render this
   // (see README's "Differences from the original").
   if (node.label !== null) {
-    doc.textarea(box, node.label, font, fontSize, { fill: node.textcolor, halign: "center" });
+    doc.textarea(textBoxFor(metrics, node, box), node.label, font, fontSize, {
+      fill: node.textcolor,
+      halign: "center",
+    });
   }
 }
 
-// `getConnectors`/`getTextBox` are `null` - box doesn't customize
-// either, so it falls back to the plain box default for both, added
-// once connectors.ts/icon.ts exist.
-export const boxShape: NodeShape = { render: renderBoxNode, getConnectors: null, getTextBox: null };
+// `getConnectors` is still `null` - box doesn't customize it, so it
+// falls back to the plain box default, added once connectors.ts exists
+// (Step 18a). `getTextBox` narrows for an `icon` via `textBoxFor()` (see
+// icon.ts) - one of the few shapes that doesn't already override its
+// own textbox unconditionally.
+export const boxShape: NodeShape = {
+  render: renderBoxNode,
+  getConnectors: null,
+  getTextBox: (metrics, node) => textBoxFor(metrics, node, nodeBox(metrics, node)),
+};

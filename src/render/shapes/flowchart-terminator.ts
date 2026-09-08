@@ -3,7 +3,7 @@
 // and right ends), plus its shadow branch. Like
 // `roundedbox`/`cloud`/`database`, the original's alternate raster
 // `render_shape`/`render_shape_background` is out of scope for an
-// SVG-only port. A background image is deferred to Step 17c, same as
+// SVG-only port. A background image is deferred to a later step, same as
 // box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
@@ -56,10 +56,11 @@ export function renderFlowchartTerminatorNode(
 
 // `getConnectors` is `null` - `terminator.py` never overrides
 // `self.connectors`, so it inherits the plain box default, same as
-// box.ts. `getTextBox` is `null` too for now - `terminator.py` does
-// override `self.textbox` (the inset box between the rounded ends,
-// above), but that's only wired up once connectors.ts/icon.ts exist
-// (Step 17c/18a).
+// box.ts. `getTextBox` stays `null` too: `terminator.py` does override
+// `self.textbox` unconditionally (the inset box between the rounded
+// ends, above), so it never narrows for an `icon` - icon.ts existing
+// doesn't unblock this. It gets a real getTextBox once connectors.ts
+// exists (Step 18a), at the same time as its own getConnectors.
 export const flowchartTerminatorShape: NodeShape = {
   render: renderFlowchartTerminatorNode,
   getConnectors: null,

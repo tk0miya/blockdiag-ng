@@ -1,6 +1,6 @@
 // Ported from `noderenderer/flowchart/input.py`: a parallelogram,
 // slanted inward at the top. Plus its shadow branch. A background
-// image is deferred to Step 17c, same as box.ts.
+// image is deferred to a later step, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
 import type { Box } from "../geometry.js";
@@ -50,9 +50,11 @@ export function renderFlowchartInputNode(
 
 // `getConnectors` is `null` - `input.py` never overrides
 // `self.connectors`, so it inherits the plain box default, same as
-// box.ts. `getTextBox` is `null` too for now - `input.py` does override
-// `self.textbox` (narrowed by the parallelogram's slant, above), but
-// that's only wired up once connectors.ts/icon.ts exist (Step 17c/18a).
+// box.ts. `getTextBox` stays `null` too: `input.py` does override
+// `self.textbox` unconditionally (narrowed by the parallelogram's
+// slant, above), so it never narrows for an `icon` - icon.ts existing
+// doesn't unblock this. It gets a real getTextBox once connectors.ts
+// exists (Step 18a), at the same time as its own getConnectors.
 export const flowchartInputShape: NodeShape = {
   render: renderFlowchartInputNode,
   getConnectors: null,

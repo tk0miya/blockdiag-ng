@@ -4,11 +4,12 @@
 // `render_shape_outline` build the same look out of ellipses and
 // rectangles instead, for raster backends with no path support; this
 // port only ever targets SVG, so that alternate, more complex path
-// isn't ported. A background image is deferred to Step 17c, same as
-// box.ts.
+// isn't ported. `icon` narrows the label the same way as box.ts (see
+// icon.ts); a `background` image is deferred to a later step.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
 import type { Box } from "../geometry.js";
+import { textBoxFor } from "../icon.js";
 import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
 import type { RenderMode } from "../render-mode.js";
@@ -50,11 +51,18 @@ export function renderRoundedboxNode(
 
   doc.path(roundedRectPath(box, metrics.cellSize), { fill: node.color, outline: node.linecolor, style: node.style });
   if (node.label !== null) {
-    doc.textarea(box, node.label, font, fontSize, { fill: node.textcolor, halign: "center" });
+    doc.textarea(textBoxFor(metrics, node, box), node.label, font, fontSize, {
+      fill: node.textcolor,
+      halign: "center",
+    });
   }
 }
 
-// `getConnectors`/`getTextBox` are `null` - roundedbox doesn't
-// customize either, so it falls back to the plain box default for
-// both, added once connectors.ts/icon.ts exist.
-export const roundedboxShape: NodeShape = { render: renderRoundedboxNode, getConnectors: null, getTextBox: null };
+// `getConnectors` is still `null` - roundedbox doesn't customize it, so
+// it falls back to the plain box default, added once connectors.ts
+// exists (Step 18a). `getTextBox` narrows for an `icon`, same as box.ts.
+export const roundedboxShape: NodeShape = {
+  render: renderRoundedboxNode,
+  getConnectors: null,
+  getTextBox: (metrics, node) => textBoxFor(metrics, node, nodeBox(metrics, node)),
+};
