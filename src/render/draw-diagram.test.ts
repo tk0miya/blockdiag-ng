@@ -63,12 +63,46 @@ describe("renderDiagramToSvg", () => {
     );
   });
 
-  it("draws nothing for a line-shaped group (its border comes later, once groups render fully)", () => {
+  it("draws no filled background for a line-shaped group - only its own outlined border, once every node/edge is drawn", () => {
     const output = svg("diagram { group G { shape = line; A -> B; } }");
-    // Node shadows (on by default) also use the blur filter, so this
-    // checks specifically for the group's own orange background - not
-    // just the absence of "filter:url(#filter_blur)" anywhere at all.
-    expect(output).not.toContain("rgb(243,152,0)");
+    // No fill="rgb(243,152,0)" (the group's own default color, used as
+    // its background fill for a box-shaped group) anywhere - only its
+    // own border, outlined in that same default color.
+    expect(output).not.toContain('fill="rgb(243,152,0)"');
+    const shaftIndex = output.indexOf('<path d="M 192 60 L 248 60"');
+    const borderIndex = output.indexOf(
+      '<rect x="56" y="30" width="336" height="60" fill="none" stroke="rgb(243,152,0)" stroke-width="3"/>',
+    );
+    expect(shaftIndex).toBeGreaterThan(-1);
+    expect(borderIndex).toBeGreaterThan(shaftIndex);
+  });
+
+  it("passes a line-shaped group's own color/style/thick through to its border", () => {
+    const output = svg('diagram { group G { shape = line; color = red; style = dashed; label = "grp"; A -> B; } }');
+    expect(output).toContain(
+      '<rect x="56" y="30" width="336" height="60" fill="none" stroke="rgb(255,0,0)" stroke-width="3" stroke-dasharray="12"/>',
+    );
+  });
+
+  it("draws a group's own label in a strip above its box, after its border", () => {
+    const output = svg('diagram { group G { shape = line; label = "grp"; A -> B; } }');
+    const borderIndex = output.indexOf('<rect x="56" y="30" width="336" height="60"');
+    const labelMatch = output.match(/<text x="([\d.]+)" y="([\d.]+)"[^>]*>grp</);
+    expect(borderIndex).toBeGreaterThan(-1);
+    expect(labelMatch).not.toBeNull();
+    expect(output.indexOf(labelMatch?.[0] as string)).toBeGreaterThan(borderIndex);
+    // The original places this at (224, 34) - see svg-document.test.ts's
+    // note on this port's font-measurement tolerance.
+    expect(Math.abs(Number(labelMatch?.[1]) - 224)).toBeLessThan(1);
+    expect(Math.abs(Number(labelMatch?.[2]) - 34)).toBeLessThan(1);
+  });
+
+  it("draws a box-shaped group's own label too, in the same strip above its box", () => {
+    const output = svg('diagram { group G { label = "grp"; A -> B; } }');
+    const labelMatch = output.match(/<text x="([\d.]+)" y="([\d.]+)"[^>]*>grp</);
+    expect(labelMatch).not.toBeNull();
+    expect(Math.abs(Number(labelMatch?.[1]) - 224)).toBeLessThan(1);
+    expect(Math.abs(Number(labelMatch?.[2]) - 34)).toBeLessThan(1);
   });
 
   it("draws a square node at a fixed size, centered on its cell", () => {

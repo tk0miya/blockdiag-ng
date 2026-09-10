@@ -2,18 +2,19 @@
 // the entry point tying a laid-out `Diagram` to an SVG document. Covers
 // background skeleton (`_draw_background()`'s group backgrounds and node
 // shadows), node rendering (`_draw_elements()`'s node loop,
-// `DiagramDraw.node()`) for the shapes ported so far, and edges
+// `DiagramDraw.node()`) for the shapes ported so far, edges
 // (`draw-edges.ts` - every orientation/`edge_layout` combination the
-// original itself supports). Group borders/labels are added in a later
-// step.
+// original itself supports), and group borders/labels.
 import type { AnyGroup, Diagram, DiagramNode, NodeGroup } from "../model/elements.js";
 import { drawEdges } from "./draw-edges.js";
 import type { Font } from "./font-metrics.js";
 import { drawIcon } from "./icon.js";
 import {
   collectAllNodes,
+  coreBox,
   createDiagramMetrics,
   type DiagramMetrics,
+  groupLabelBox,
   marginBox,
   nodeBox,
   pageSize,
@@ -200,6 +201,49 @@ function drawGroupBackgrounds(doc: SvgDocument, metrics: DiagramMetrics, diagram
   }
 }
 
+// Ported from `DiagramDraw._draw_elements()`'s group-border loop. Only
+// `shape == 'line'` groups get an outline here - a `shape == 'box'`
+// group's own outline is its filled background above (drawn once, in
+// the earlier background pass), not a separate border on top of it.
+function drawGroupBorders(doc: SvgDocument, metrics: DiagramMetrics, diagram: Diagram): void {
+  for (const group of traverseGroupsPreOrder(diagram)) {
+    if (group.shape === "line") {
+      doc.rectangle(marginBox(metrics, nodeBox(metrics, group, false)), {
+        fill: "none",
+        outline: group.color,
+        style: group.style,
+        thick: group.thick,
+      });
+    }
+  }
+}
+
+// Ported from `DiagramDraw.group_label()`: a `separated` group (no
+// nodes of its own placed inside it, so no room for a label above it)
+// gets its label centered within its own box instead of in the usual
+// strip above it. `separated` itself is never set anywhere in this
+// port yet (`builder.ts` never computes it - it's tied to a `NodeGroup`
+// -extraction feature, `builder.py`'s `_dive_diagram`, out of scope so
+// far), so this branch is unreachable through any diagram this port can
+// currently build - kept faithfully anyway, since it costs nothing and
+// the model field already exists.
+function drawGroupLabels(
+  doc: SvgDocument,
+  metrics: DiagramMetrics,
+  diagram: Diagram,
+  font: Font,
+  defaultFontSize: number,
+): void {
+  for (const group of traverseGroupsPreOrder(diagram)) {
+    if (group.label === null || group.label === "") continue;
+
+    const fontSize = group.fontsize ?? defaultFontSize;
+    const box = nodeBox(metrics, group, false);
+    const labelBox = group.separated ? coreBox(box) : groupLabelBox(metrics, box);
+    doc.textarea(labelBox, group.label, font, fontSize, { fill: group.textcolor });
+  }
+}
+
 export function renderDiagramToSvg(
   diagram: Diagram,
   options: { readonly font: Font; readonly fontSize?: number },
@@ -212,6 +256,8 @@ export function renderDiagramToSvg(
   drawNodeShadows(doc, metrics, diagram, options.font, fontSize);
   drawNodes(doc, metrics, diagram, options.font, fontSize);
   drawEdges(doc, metrics, diagram, options.font, fontSize);
+  drawGroupBorders(doc, metrics, diagram);
+  drawGroupLabels(doc, metrics, diagram, options.font, fontSize);
 
   return doc.toString(pageSize(metrics, diagram.colwidth, diagram.colheight));
 }
