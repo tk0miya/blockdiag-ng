@@ -659,8 +659,17 @@ describe("renderDiagramToSvg", () => {
       );
     });
 
-    it("throws naming edge_layout, for a flowchart layout this step doesn't support yet", () => {
-      expect(() => svg("diagram { edge_layout = flowchart; A -> B; }")).toThrow(/flowchart/);
+    it("routes a flowchart-mode 'right-down' edge down-then-right, instead of landscape's diagonal detour", () => {
+      const output = svg("diagram { edge_layout = flowchart; A -> B; A -> C; B -> D; C -> D; }");
+      // A -> C: the flowchart-only override (`FlowchartLandscapeEdgeMetrics`)
+      // - straight down from A, then right into C - unlike a plain
+      // landscape group's own diagonal-detour routing for the same
+      // 'right-down' direction (landscape-edge-metrics.test.ts).
+      expect(output).toContain('<path d="M 128 80 L 128 140" fill="none" stroke="rgb(0,0,0)"/>');
+      expect(output).toContain('<path d="M 128 140 L 248 140" fill="none" stroke="rgb(0,0,0)"/>');
+      expect(output).toContain(
+        '<polygon points="255,140 248,136 248,144 255,140" fill="rgb(0,0,0)" stroke="rgb(0,0,0)"/>',
+      );
     });
   });
 });
