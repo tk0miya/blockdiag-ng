@@ -7,7 +7,15 @@
 import type { AnyGroup, Diagram, DiagramNode, NodeGroup } from "../model/elements.js";
 import type { Font } from "./font-metrics.js";
 import { drawIcon } from "./icon.js";
-import { collectAllNodes, createDiagramMetrics, type DiagramMetrics, marginBox, nodeBox, pageSize } from "./metrics.js";
+import {
+  collectAllNodes,
+  createDiagramMetrics,
+  type DiagramMetrics,
+  marginBox,
+  nodeBox,
+  pageSize,
+  shiftMetrics,
+} from "./metrics.js";
 import { drawNumberBadge } from "./number-badge.js";
 import type { RenderMode } from "./render-mode.js";
 import { shadowFilter } from "./shadow.js";
@@ -81,6 +89,53 @@ function rendererFor(shape: string): NodeRenderer {
   return renderer;
 }
 
+// Ported from `NodeShape.render()`: a node's own shape, plus (only for
+// the normal, non-shadow pass - matching `render_icon()`/
+// `render_label()`/`render_number_badge()`'s own `kwargs.get('shadow')`
+// guards) its icon and number badge. Shape-independent, so wired up
+// here once rather than per shape.
+//
+// `stacked` recurses into 2 duplicate copies first - `label`/
+// `background` cleared, shifted down-right by decreasing amounts via
+// `shiftMetrics()` (so nothing else about their own position changes),
+// `isDuplicate=true` so they don't recurse again - drawn before the
+// real node, so they end up underneath it: a stack of cards receding
+// into the background. This happens for the shadow pass too (each
+// duplicate casts its own shadow, at its own shifted position),
+// matching the original's own `NodeShape.render()` being reached from
+// both `_draw_background()`'s shadow loop and `_draw_elements()`'s
+// normal one - neither passes anything that would stop it recursing.
+function renderNode(
+  doc: SvgDocument,
+  metrics: DiagramMetrics,
+  node: DiagramNode,
+  mode: RenderMode,
+  isDuplicate: boolean,
+): void {
+  if (node.stacked && !isDuplicate) {
+    const duplicate: DiagramNode = { ...node, label: "", background: null };
+    const r = Math.floor(metrics.cellSize / 2);
+    for (const i of [2, 1]) {
+      renderNode(doc, shiftMetrics(metrics, r * i, r * i), duplicate, mode, true);
+    }
+  }
+
+  rendererFor(node.shape)(doc, metrics, node, mode);
+
+  if (mode.kind === "normal") {
+    // The original draws the icon between a shape's own fill and its
+    // label, so an overlapping label (only possible for a shape that
+    // doesn't narrow its own textbox to avoid the icon - see icon.ts)
+    // ends up on top of it. Every shape here draws its fill and label
+    // together in one call above, so this ends up after both instead -
+    // a label overlapping an icon wins there, not here. Deliberately
+    // left as a divergence (see README) rather than restructuring every
+    // shape to draw its own label separately just for this.
+    drawIcon(doc, metrics, node);
+    drawNumberBadge(doc, metrics, mode.font, mode.fontSize, node);
+  }
+}
+
 // Ported from `DiagramDraw._draw_background()`'s node loop: every
 // node's shadow, drawn before (so ends up underneath) anything from
 // `drawNodes()` below - a node whose own color is the literal `"none"`
@@ -99,7 +154,7 @@ function drawNodeShadows(
   for (const node of collectAllNodes(diagram)) {
     if (node.color === "none") continue;
     const mode: RenderMode = { kind: "shadow", font, fontSize: node.fontsize ?? defaultFontSize, filter };
-    rendererFor(node.shape)(doc, metrics, node, mode);
+    renderNode(doc, metrics, node, mode, false);
   }
 }
 
@@ -113,17 +168,7 @@ function drawNodes(
   for (const node of collectAllNodes(diagram)) {
     const fontSize = node.fontsize ?? defaultFontSize;
     const mode: RenderMode = { kind: "normal", font, fontSize };
-    rendererFor(node.shape)(doc, metrics, node, mode);
-    // The original draws the icon between a shape's own fill and its
-    // label, so an overlapping label (only possible for a shape that
-    // doesn't narrow its own textbox to avoid the icon - see icon.ts)
-    // ends up on top of it. Every shape here draws its fill and label
-    // together in one call above, so this ends up after both instead -
-    // a label overlapping an icon wins there, not here. Deliberately
-    // left as a divergence (see README) rather than restructuring every
-    // shape to draw its own label separately just for this.
-    drawIcon(doc, metrics, node);
-    drawNumberBadge(doc, metrics, font, fontSize, node);
+    renderNode(doc, metrics, node, mode, false);
   }
 }
 
