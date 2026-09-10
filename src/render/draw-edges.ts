@@ -1,14 +1,17 @@
 // Ported from `DiagramDraw.edge()`/`.edge_label()` (vendor/blockdiag/
-// src/blockdiag/drawer.py), restricted for now to the default (non-
-// `flowchart`) `edge_layout` - the `Flowchart*EdgeMetrics` variants are
-// a later step (18c). An edge under `edge_layout = flowchart` throws,
-// naming it, rather than silently drawing it wrong - the same
-// "unsupported, not unknown" approach `draw-diagram.ts`'s `rendererFor`
-// takes for a node shape.
+// src/blockdiag/drawer.py).
 import { collectAllEdges } from "../layout/group-layout.js";
 import type { Diagram, DiagramEdge, GroupOrientation } from "../model/elements.js";
 import { nodeConnectors } from "./connectors.js";
 import { adjustShaftForHeads, edgeHeads } from "./edge-metrics.js";
+import {
+  flowchartLandscapeHeadshapes,
+  flowchartLandscapeLabelbox,
+  flowchartLandscapeShaft,
+  flowchartPortraitHeadshapes,
+  flowchartPortraitLabelbox,
+  flowchartPortraitShaft,
+} from "./flowchart-edge-metrics.js";
 import type { Font } from "./font-metrics.js";
 import { landscapeHeadshapes, landscapeLabelbox, landscapeShaft } from "./landscape-edge-metrics.js";
 import type { DiagramMetrics } from "./metrics.js";
@@ -26,12 +29,19 @@ function drawableEdges(diagram: Diagram): DiagramEdge[] {
   return collectAllEdges(diagram).filter((edge) => edge.style === null || edge.style.type !== "none");
 }
 
-// Ported from `DiagramMetrics.edge()`'s own orientation dispatch
-// (`LandscapeEdgeMetrics`/`PortraitEdgeMetrics`) - restricted to those
-// two (not their `Flowchart*` subclasses) for now.
+// Ported from `DiagramMetrics.edge()`'s own dispatch: which of the four
+// `EdgeMetrics` subclasses (`Landscape`/`Portrait`, each with a
+// `Flowchart*` variant) an edge's own group orientation and the
+// diagram-wide `edge_layout` pick.
 function edgeMetricsFor(edgeLayout: Diagram["edgeLayout"], orientation: GroupOrientation) {
   if (edgeLayout === "flowchart") {
-    throw new Error("edge_layout 'flowchart' is not yet supported");
+    return orientation === "portrait"
+      ? { headshapes: flowchartPortraitHeadshapes, shaft: flowchartPortraitShaft, labelbox: flowchartPortraitLabelbox }
+      : {
+          headshapes: flowchartLandscapeHeadshapes,
+          shaft: flowchartLandscapeShaft,
+          labelbox: flowchartLandscapeLabelbox,
+        };
   }
   return orientation === "portrait"
     ? { headshapes: portraitHeadshapes, shaft: portraitShaft, labelbox: portraitLabelbox }
