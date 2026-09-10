@@ -29,13 +29,37 @@ import { foldText } from "../text-folder.js";
 // measurement `measureTextHeight()` alone gives. Only `actor` needs
 // this - everywhere else measures a label against its own real,
 // already-bounded textbox instead of pre-measuring it in isolation.
+// Rounded to a whole pixel, matching Pillow's own `textsize()` (which
+// this is ported from) always returning an integer - since this value
+// feeds straight into node geometry (this shape's own textbox, and
+// `connectors.ts`'s `actorConnectors()`), an unrounded float would leak
+// as literal float noise into rendered/queried coordinates instead of
+// just being a harmless sub-pixel measurement difference.
 function labelHeight(font: Font, label: string, fontSize: number): number {
   const measure = (text: string) => ({
     width: measureTextWidth(font, text, fontSize),
     height: measureTextHeight(font, text, fontSize),
   });
   const unbounded: Box = { x1: 0, y1: 0, x2: 65535, y2: 65535 };
-  return boxHeight(foldText(unbounded, label, measure).outlineBox);
+  return Math.round(boxHeight(foldText(unbounded, label, measure).outlineBox));
+}
+
+// Shared with connectors.ts: an edge attaches to this same
+// label-height-dependent radius/center, not just the shape's own
+// on-screen drawing - so this is exported rather than re-derived.
+export function actorGeometry(
+  metrics: DiagramMetrics,
+  node: DiagramNode,
+  font: Font,
+  fontSize: number,
+): { center: Point; radius: number; textHeight: number } {
+  const box = nodeBox(metrics, node);
+  const hasLabel = node.label !== null && node.label !== "";
+  const textHeight = hasLabel ? labelHeight(font, node.label as string, fontSize) : 0;
+  const shortside = hasLabel
+    ? Math.min(boxWidth(box), boxHeight(box) - textHeight)
+    : Math.min(boxWidth(box), boxHeight(box));
+  return { center: boxCenter(box), radius: Math.floor(shortside / 8), textHeight };
 }
 
 function headPart(center: Point, radius: number): Box {
@@ -81,13 +105,7 @@ function bodyPart(bodyC: Point, radius: number): Point[] {
 
 export function renderActorNode(doc: SvgDocument, metrics: DiagramMetrics, node: DiagramNode, mode: RenderMode): void {
   const box = nodeBox(metrics, node);
-  const hasLabel = node.label !== null && node.label !== "";
-  const textHeight = hasLabel ? labelHeight(mode.font, node.label as string, mode.fontSize) : 0;
-  const shortside = hasLabel
-    ? Math.min(boxWidth(box), boxHeight(box) - textHeight)
-    : Math.min(boxWidth(box), boxHeight(box));
-  const radius = Math.floor(shortside / 8);
-  const center = boxCenter(box);
+  const { center, radius, textHeight } = actorGeometry(metrics, node, mode.font, mode.fontSize);
 
   const body = bodyPart(center, radius);
   const head = headPart(center, radius);
