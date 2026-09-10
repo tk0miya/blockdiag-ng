@@ -10,10 +10,29 @@
 import type { AnyGroup, Diagram, DiagramEdge, DiagramNode } from "../model/elements.js";
 import { collectAllEdges } from "./group-layout.js";
 
-type Direction = "left-up" | "left" | "left-down" | "up" | "same" | "down" | "right-up" | "right" | "right-down";
+// Ported from `DiagramEdge.direction`'s own possible values. Named
+// `EdgeGeometricDirection` (not just `EdgeDirection`) to stay clearly
+// distinct from the model's own `EdgeDirection` (`edge.dir`'s type -
+// which end(s) grow an arrowhead, a wholly different, user-facing
+// attribute this is never confused with in the original either, since
+// Python just calls them `direction` and `dir`).
+export type EdgeGeometricDirection =
+  | "left-up"
+  | "left"
+  | "left-down"
+  | "up"
+  | "same"
+  | "down"
+  | "right-up"
+  | "right"
+  | "right-down";
 
-// Ported from `DiagramEdge.direction`.
-function edgeDirection(edge: DiagramEdge): Direction {
+// Ported from `DiagramEdge.direction`. Exported since `render/edge-
+// metrics.ts` needs this same computation for arrow-head/shaft routing
+// - shared here (rather than each maintaining its own copy) since it's
+// a real, if small, piece of ported business logic, not template
+// boilerplate.
+export function edgeDirection(edge: DiagramEdge): EdgeGeometricDirection {
   const { x: x1, y: y1 } = edge.node1.xy;
   const { x: x2, y: y2 } = edge.node2.xy;
   if (x1 > x2) {
