@@ -651,8 +651,16 @@ describe("renderDiagramToSvg", () => {
       expect(output).toContain('<path d="M 192 60 L 248 60" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4"/>');
     });
 
-    it("throws naming the layout, for a group orientation this step doesn't support yet", () => {
-      expect(() => svg("diagram { orientation = portrait; A -> B; }")).toThrow(/portrait/);
+    it("routes a portrait-oriented group's edge top-to-bottom instead of left-to-right", () => {
+      const output = svg("diagram { orientation = portrait; A -> B; }");
+      expect(output).toContain('<path d="M 128 80 L 128 112" fill="none" stroke="rgb(0,0,0)"/>');
+      expect(output).toContain(
+        '<polygon points="128,119 124,112 132,112 128,119" fill="rgb(0,0,0)" stroke="rgb(0,0,0)"/>',
+      );
+    });
+
+    it("throws naming edge_layout, for a flowchart layout this step doesn't support yet", () => {
+      expect(() => svg("diagram { edge_layout = flowchart; A -> B; }")).toThrow(/flowchart/);
     });
   });
 });
