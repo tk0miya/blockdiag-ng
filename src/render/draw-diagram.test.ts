@@ -51,6 +51,19 @@ describe("renderDiagramToSvg", () => {
     expect(output).toContain('stroke-dasharray="4"');
   });
 
+  // Locks in a real, verified-against-the-original finding: `fontfamily`
+  // has no rendering effect at all through the DSL alone - see
+  // svg-document.ts's own `text()` comment for why.
+  it("ignores a node's own fontfamily attribute, matching the original's own real behavior", () => {
+    const output = svg('diagram { A [label = "Hi", fontfamily = "serif-bold"]; }');
+    expect(output).toContain('font-family="sans-serif" font-size="11" font-weight="normal" font-style="normal"');
+  });
+
+  it("ignores a diagram-wide default_fontfamily attribute the same way", () => {
+    const output = svg('diagram { default_fontfamily = "serif-bold"; A [label = "Hi"]; }');
+    expect(output).toContain('font-family="sans-serif" font-size="11" font-weight="normal" font-style="normal"');
+  });
+
   it("skips the label instead of crashing for a bare `label;` attribute", () => {
     const output = svg("diagram { A [label]; }");
     expect(output).not.toContain("<text");
