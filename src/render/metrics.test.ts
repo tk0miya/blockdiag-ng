@@ -3,7 +3,7 @@ import { buildDiagram } from "../builder/tree-builder.js";
 import { layoutDiagram } from "../layout/group-layout.js";
 import type { Diagram, DiagramNode } from "../model/elements.js";
 import { parseString } from "../parser/parser.js";
-import { createDiagramMetrics, nodeBox, pageSize, shiftMetrics } from "./metrics.js";
+import { coreBox, createDiagramMetrics, groupLabelBox, nodeBox, pageSize, shiftMetrics } from "./metrics.js";
 
 // Expected pixel boxes and page sizes were captured by running the
 // original implementation's DiagramDraw('SVG', diagram) (vendor/
@@ -66,5 +66,21 @@ describe("createDiagramMetrics / nodeBox / pageSize", () => {
     const [a, b] = d.nodes as DiagramNode[];
     expect(nodeBox(shifted, a)).toEqual({ x1: 68, y1: 48, x2: 196, y2: 88 });
     expect(nodeBox(shifted, b)).toEqual({ x1: 260, y1: 48, x2: 388, y2: 88 });
+  });
+});
+
+describe("coreBox / groupLabelBox", () => {
+  it("insets a group's own box for a separated group's centered label", () => {
+    const d = diagram("diagram { group G { A -> B; } }");
+    const metrics = createDiagramMetrics(d);
+    const group = d.nodes[0];
+    expect(coreBox(nodeBox(metrics, group, false))).toEqual({ x1: 68, y1: 44, x2: 376, y2: 72 });
+  });
+
+  it("sits a group's own label strip flush above its box, spanning its full width", () => {
+    const d = diagram("diagram { group G { A -> B; } }");
+    const metrics = createDiagramMetrics(d);
+    const group = d.nodes[0];
+    expect(groupLabelBox(metrics, nodeBox(metrics, group, false))).toEqual({ x1: 64, y1: 20, x2: 384, y2: 40 });
   });
 });
