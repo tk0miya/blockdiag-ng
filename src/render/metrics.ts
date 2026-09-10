@@ -15,7 +15,7 @@
 
 import type { GroupItem } from "../layout/related-nodes.js";
 import type { AnyGroup, Diagram, DiagramNode } from "../model/elements.js";
-import type { Box, Size } from "./geometry.js";
+import type { Box, Point, Size } from "./geometry.js";
 
 const CELL_SIZE = 8;
 const DEFAULT_NODE_WIDTH = CELL_SIZE * 16;
@@ -30,8 +30,22 @@ export interface DiagramMetrics {
   readonly spanWidth: number;
   readonly spanHeight: number;
   readonly pagePadding: number;
+  // Ported from `page_margin`: a uniform, otherwise-always-zero offset
+  // applied to every node's own box - unlike `pagePadding` (set once,
+  // diagram-wide), this exists so `shiftMetrics()` can retarget an
+  // entire render pass at an offset copy of the page, for `stacked`'s
+  // duplicate layers (see draw-diagram.ts).
+  readonly pageMargin: Point;
   readonly columnWidths: ReadonlyMap<number, number>;
   readonly rowHeights: ReadonlyMap<number, number>;
+}
+
+// Ported from `DiagramMetrics.shift()`: a copy of `metrics` retargeted
+// at `pageMargin`, so every node's own box computed through it comes out
+// shifted by that same amount - used to draw a `stacked` node's
+// duplicate layers without touching the real one's own position.
+export function shiftMetrics(metrics: DiagramMetrics, dx: number, dy: number): DiagramMetrics {
+  return { ...metrics, pageMargin: { x: dx, y: dy } };
 }
 
 // Ported from `Diagram.traverse_nodes()`, restricted to actual drawable
@@ -97,6 +111,7 @@ export function createDiagramMetrics(diagram: Diagram): DiagramMetrics {
     spanWidth,
     spanHeight,
     pagePadding,
+    pageMargin: { x: 0, y: 0 },
     columnWidths: columnSizes(nodes, diagram.colwidth, "x", nodeWidth),
     rowHeights: columnSizes(nodes, diagram.colheight, "y", nodeHeight),
   };
@@ -136,10 +151,10 @@ export function nodeBox(metrics: DiagramMetrics, node: GroupItem, usePadding = t
   }
 
   return {
-    x1: metrics.pagePadding + widthBefore + metrics.spanWidth * (x + 1) + xDiff,
-    y1: metrics.pagePadding + heightBefore + metrics.spanHeight * (y + 1) + yDiff,
-    x2: metrics.pagePadding + widthThrough + metrics.spanWidth * (lastColumn + 1) - xDiff,
-    y2: metrics.pagePadding + heightThrough + metrics.spanHeight * (lastRow + 1) - yDiff,
+    x1: metrics.pageMargin.x + metrics.pagePadding + widthBefore + metrics.spanWidth * (x + 1) + xDiff,
+    y1: metrics.pageMargin.y + metrics.pagePadding + heightBefore + metrics.spanHeight * (y + 1) + yDiff,
+    x2: metrics.pageMargin.x + metrics.pagePadding + widthThrough + metrics.spanWidth * (lastColumn + 1) - xDiff,
+    y2: metrics.pageMargin.y + metrics.pagePadding + heightThrough + metrics.spanHeight * (lastRow + 1) - yDiff,
   };
 }
 
@@ -166,7 +181,7 @@ export function pageSize(metrics: DiagramMetrics, colwidth: number, colheight: n
   const height = sumBefore(metrics.rowHeights, metrics.nodeHeight, colheight);
 
   return {
-    width: 2 * metrics.pagePadding + width + metrics.spanWidth * (colwidth + 1),
-    height: 2 * metrics.pagePadding + height + metrics.spanHeight * (colheight + 1),
+    width: metrics.pageMargin.x + 2 * metrics.pagePadding + width + metrics.spanWidth * (colwidth + 1),
+    height: metrics.pageMargin.y + 2 * metrics.pagePadding + height + metrics.spanHeight * (colheight + 1),
   };
 }
