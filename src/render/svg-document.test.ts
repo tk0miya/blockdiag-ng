@@ -35,6 +35,14 @@ describe("SvgDocument", () => {
       doc.rectangle({ x1: 0, y1: 0, x2: 10, y2: 10 }, { fill: [243, 152, 0], filter: "blur" });
       expect(doc.toString({ width: 10, height: 10 })).toContain('style="filter:url(#filter_blur)"');
     });
+
+    it("passes thick through as its own stroke-width, and scales a dashed style's dasharray by it", () => {
+      const doc = new SvgDocument();
+      doc.rectangle({ x1: 0, y1: 0, x2: 10, y2: 10 }, { outline: [0, 0, 0], thick: 3, style: { type: "dashed" } });
+      const output = doc.toString({ width: 10, height: 10 });
+      expect(output).toContain('stroke-width="3"');
+      expect(output).toContain('stroke-dasharray="12"');
+    });
   });
 
   describe("ellipse", () => {
