@@ -1,10 +1,13 @@
 // Ported from `DiagramDraw` (vendor/blockdiag/src/blockdiag/drawer.py):
 // the entry point tying a laid-out `Diagram` to an SVG document. Covers
 // background skeleton (`_draw_background()`'s group backgrounds and node
-// shadows) plus node rendering (`_draw_elements()`'s node loop,
-// `DiagramDraw.node()`) for the shapes ported so far. Edges and group
-// borders/labels are added in later steps.
+// shadows), node rendering (`_draw_elements()`'s node loop,
+// `DiagramDraw.node()`) for the shapes ported so far, and edges
+// (`draw-edges.ts`, restricted for now to a `landscape`-oriented group
+// under the default `edge_layout` - see that file). Group borders/labels
+// are added in a later step.
 import type { AnyGroup, Diagram, DiagramNode, NodeGroup } from "../model/elements.js";
+import { drawEdges } from "./draw-edges.js";
 import type { Font } from "./font-metrics.js";
 import { drawIcon } from "./icon.js";
 import {
@@ -208,6 +211,7 @@ export function renderDiagramToSvg(
   drawGroupBackgrounds(doc, metrics, diagram);
   drawNodeShadows(doc, metrics, diagram, options.font, fontSize);
   drawNodes(doc, metrics, diagram, options.font, fontSize);
+  drawEdges(doc, metrics, diagram, options.font, fontSize);
 
   return doc.toString(pageSize(metrics, diagram.colwidth, diagram.colheight));
 }

@@ -1,6 +1,7 @@
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { buildDiagram } from "../builder/tree-builder.js";
+import { markSkippedEdges } from "../layout/edge-routing.js";
 import { layoutDiagram } from "../layout/group-layout.js";
 import { parseString } from "../parser/parser.js";
 import { renderDiagramToSvg } from "./draw-diagram.js";
@@ -19,6 +20,7 @@ const LARGE_ICON_PATH = join(import.meta.dirname, "test-fixtures/icon-large.png"
 function svg(source: string): string {
   const diagram = buildDiagram(parseString(source));
   layoutDiagram(diagram);
+  markSkippedEdges(diagram);
   return renderDiagramToSvg(diagram, { font: loadFont(VL_GOTHIC_PATH) });
 }
 
@@ -590,6 +592,67 @@ describe("renderDiagramToSvg", () => {
       const output = svg(`diagram { A [label = "Hi", stacked, numbered = 1, icon = "${ICON_PATH}"]; }`);
       expect(output.match(/<image /g)).toHaveLength(3);
       expect(output.match(/rgb\(255,192,203\)/g)).toHaveLength(3);
+    });
+  });
+
+  describe("edges", () => {
+    it("draws a plain forward edge as a shaft plus one filled arrow-head", () => {
+      const output = svg("diagram { A -> B; }");
+      expect(output).toContain('<path d="M 192 60 L 248 60" fill="none" stroke="rgb(0,0,0)"/>');
+      expect(output).toContain('<polygon points="255,60 248,56 248,64 255,60" fill="rgb(0,0,0)" stroke="rgb(0,0,0)"/>');
+    });
+
+    it("draws a label with a white background box over the shaft, after every edge's own line", () => {
+      const output = svg('diagram { A -> B [label = "hello"]; }');
+      const shaftIndex = output.indexOf('<path d="M 192 60 L 248 60"');
+      // The background box's own width/height come from folding "hello"
+      // against the labelbox (200,35,248,55) - a font measurement, so
+      // (unlike the shaft/head above, pure grid arithmetic) only
+      // approximately matches the original's own (integer) 44x12,
+      // consistent with this project's general sub-pixel tolerance
+      // (see font-metrics.test.ts) - checked here by position (near the
+      // labelbox's own left edge and top) rather than exact size.
+      const labelMatch = output.match(
+        /<rect x="20[0-9](?:\.\d+)?" y="39(?:\.\d+)?" width="4[0-9](?:\.\d+)?" height="1[0-9](?:\.\d+)?" fill="rgb\(255,255,255\)" stroke="rgb\(0,0,0\)"\/>/,
+      );
+      expect(shaftIndex).toBeGreaterThan(-1);
+      expect(labelMatch).not.toBeNull();
+      expect(output.indexOf(labelMatch?.[0] as string)).toBeGreaterThan(shaftIndex);
+      expect(output).toContain(">hello<");
+    });
+
+    it("draws nothing at all for a style = none edge - no shaft, no head, no label", () => {
+      const output = svg('diagram { A -> B [style = none, label = "hello"]; }');
+      expect(output).not.toContain("<path");
+      expect(output).not.toContain("<polygon");
+      expect(output).not.toContain(">hello<");
+    });
+
+    it("keeps a composition hstyle's head filled with the edge's own color, unlike generalization/aggregation", () => {
+      const output = svg("diagram { A -> B [hstyle = composition]; }");
+      expect(output).toContain(
+        '<polygon points="255,60 248,56 240,60 248,64 255,60" fill="rgb(0,0,0)" stroke="rgb(0,0,0)"/>',
+      );
+    });
+
+    it("draws a generalization hstyle's head unfilled (white), unlike composition", () => {
+      const output = svg("diagram { A -> B [hstyle = generalization]; }");
+      expect(output).toContain('fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>');
+      expect(output).toContain('<polygon points="255,60 248,56 248,64 255,60"');
+    });
+
+    it("passes an edge's own thickness through to its shaft's stroke-width", () => {
+      const output = svg("diagram { A -> B [thick]; }");
+      expect(output).toContain('<path d="M 192 60 L 248 60" fill="none" stroke="rgb(0,0,0)" stroke-width="3"/>');
+    });
+
+    it("passes an edge's own dashed style through to its shaft's stroke-dasharray", () => {
+      const output = svg("diagram { A -> B [style = dashed]; }");
+      expect(output).toContain('<path d="M 192 60 L 248 60" fill="none" stroke="rgb(0,0,0)" stroke-dasharray="4"/>');
+    });
+
+    it("throws naming the layout, for a group orientation this step doesn't support yet", () => {
+      expect(() => svg("diagram { orientation = portrait; A -> B; }")).toThrow(/portrait/);
     });
   });
 });

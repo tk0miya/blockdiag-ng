@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { buildDiagram } from "../builder/tree-builder.js";
-import type { Diagram } from "../model/elements.js";
+import type { Diagram, DiagramEdge, DiagramNode } from "../model/elements.js";
 import { parseString } from "../parser/parser.js";
-import { markSkippedEdges } from "./edge-routing.js";
+import { edgeDirection, markSkippedEdges } from "./edge-routing.js";
 import { layoutDiagram } from "./group-layout.js";
 
 // Expected `skipped` values were captured by running the original
@@ -20,6 +20,29 @@ function route(source: string): Diagram {
 function skipped(diagram: Diagram) {
   return diagram.edges.map((edge) => [edge.node1.id, edge.node2.id, edge.skipped]);
 }
+
+function edgeBetween(x1: number, y1: number, x2: number, y2: number): DiagramEdge {
+  return {
+    node1: { xy: { x: x1, y: y1 } } as DiagramNode,
+    node2: { xy: { x: x2, y: y2 } } as DiagramNode,
+  } as DiagramEdge;
+}
+
+describe("edgeDirection", () => {
+  it.each([
+    [0, 0, 1, 0, "right"],
+    [0, 0, 1, 1, "right-down"],
+    [0, 0, 1, -1, "right-up"],
+    [0, 0, 0, 1, "down"],
+    [0, 0, 0, -1, "up"],
+    [0, 0, 0, 0, "same"],
+    [1, 0, 0, 0, "left"],
+    [1, 0, 0, 1, "left-down"],
+    [1, 0, 0, -1, "left-up"],
+  ] as const)("(%i,%i) -> (%i,%i) is %s", (x1, y1, x2, y2, expected) => {
+    expect(edgeDirection(edgeBetween(x1, y1, x2, y2))).toBe(expected);
+  });
+});
 
 describe("markSkippedEdges", () => {
   it("marks a 'right' edge skipped when a third node sits directly on its path", () => {
