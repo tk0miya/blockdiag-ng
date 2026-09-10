@@ -3,7 +3,7 @@ import { buildDiagram } from "../builder/tree-builder.js";
 import { layoutDiagram } from "../layout/group-layout.js";
 import type { Diagram, DiagramNode } from "../model/elements.js";
 import { parseString } from "../parser/parser.js";
-import { createDiagramMetrics, nodeBox, pageSize } from "./metrics.js";
+import { createDiagramMetrics, nodeBox, pageSize, shiftMetrics } from "./metrics.js";
 
 // Expected pixel boxes and page sizes were captured by running the
 // original implementation's DiagramDraw('SVG', diagram) (vendor/
@@ -53,5 +53,18 @@ describe("createDiagramMetrics / nodeBox / pageSize", () => {
     expect(nodeBox(metrics, b)).toEqual({ x1: 292, y1: 40, x2: 420, y2: 80 });
     expect(nodeBox(metrics, c)).toEqual({ x1: 256, y1: 120, x2: 456, y2: 160 });
     expect(pageSize(metrics, d.colwidth, d.colheight)).toEqual({ width: 520, height: 200 });
+  });
+
+  // Unlike every other case in this file, this expected value isn't
+  // captured from a live Python run - it's derived directly from the
+  // first case's own (Python-verified) unshifted boxes, offset by the
+  // same fixed (dx, dy) `shiftMetrics()` is given here.
+  it("shifts every node's own box by the same amount, uniformly", () => {
+    const d = diagram("diagram { A -> B; }");
+    const metrics = createDiagramMetrics(d);
+    const shifted = shiftMetrics(metrics, 4, 8);
+    const [a, b] = d.nodes as DiagramNode[];
+    expect(nodeBox(shifted, a)).toEqual({ x1: 68, y1: 48, x2: 196, y2: 88 });
+    expect(nodeBox(shifted, b)).toEqual({ x1: 260, y1: 48, x2: 388, y2: 88 });
   });
 });
