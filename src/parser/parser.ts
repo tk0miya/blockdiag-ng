@@ -152,12 +152,18 @@ function tryParse<T>(stream: TokenStream, fn: (stream: TokenStream) => T): T | u
   }
 }
 
-function parseId(stream: TokenStream): string {
+// Returns the whole token, not just its value, for the few callers
+// (parseOptionStmt/parseAttributeStmt) that also need its position.
+function parseIdToken(stream: TokenStream): Token {
   const token = stream.peek();
   if (token === undefined || (token.type !== "Name" && token.type !== "Number" && token.type !== "String")) {
     throw new ParseError("expected an identifier", token);
   }
-  return stream.next().value;
+  return stream.next();
+}
+
+function parseId(stream: TokenStream): string {
+  return parseIdToken(stream).value;
 }
 
 function parseNodeList(stream: TokenStream): string[] {
@@ -170,13 +176,13 @@ function parseNodeList(stream: TokenStream): string[] {
 }
 
 function parseOptionStmt(stream: TokenStream): Attr {
-  const name = parseId(stream);
+  const nameToken = parseIdToken(stream);
   let value: string | null = null;
   if (stream.isOp("=")) {
     stream.next();
     value = parseId(stream);
   }
-  return { type: "Attr", name, value };
+  return { type: "Attr", name: nameToken.value, value, position: nameToken.start };
 }
 
 function parseOptionList(stream: TokenStream): Attr[] {
@@ -241,10 +247,10 @@ function parseNodeStmt(stream: TokenStream): NodeStmt[] {
 }
 
 function parseAttributeStmt(stream: TokenStream): Attr {
-  const name = parseId(stream);
+  const nameToken = parseIdToken(stream);
   stream.expectOp("=");
   const value = parseId(stream);
-  return { type: "Attr", name, value };
+  return { type: "Attr", name: nameToken.value, value, position: nameToken.start };
 }
 
 function parseGroupStmt(stream: TokenStream): GroupStmt {
