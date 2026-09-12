@@ -14,6 +14,8 @@ node dist/cli.js diagram.diag -T png   # writes diagram.png instead
 node dist/cli.js diagram.diag -o out.svg
 cat diagram.diag | node dist/cli.js -  # reads from stdin
 node dist/cli.js diagram.diag --lint   # validates only, writes nothing
+node dist/cli.js diagram.diag -T ast   # writes the parsed AST as JSON
+node dist/cli.js diagram.json          # an AST JSON file works as input too
 ```
 
 Only SVG and PNG output exist so far - font selection (`-f`/
