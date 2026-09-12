@@ -19,9 +19,24 @@
 // (see the note on classes removed from src/model/elements.ts); here it's
 // passed in explicitly instead of living on the domain model.
 
-import type { Attr } from "../parser/ast.js";
+import type { Attr, Position } from "../parser/ast.js";
+import { ColorParseError } from "./color.js";
 
-export class AttributeError extends Error {}
+export class AttributeError extends Error {
+  position: Position | undefined;
+}
+
+// Attaches `position` to an AttributeError/ColorParseError if it doesn't
+// already have one - each applyXAttribute wrapper calls this on its way
+// back out, so the innermost attribute actually at fault (e.g. one found
+// while replaying a resolved `class`) keeps its own position rather than
+// being overwritten by an outer, unrelated one.
+export function attachAttrPosition(error: unknown, position: Position): void {
+  if ((error instanceof AttributeError || error instanceof ColorParseError) && error.position === undefined) {
+    error.position = position;
+    error.message = `${error.message} at ${position.line}:${position.column}`;
+  }
+}
 
 export interface ClassRegistry {
   get(name: string): readonly Attr[] | undefined;

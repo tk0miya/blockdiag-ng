@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { DiagramEdge, DiagramNode } from "../model/elements.js";
-import type { Attr } from "../parser/ast.js";
+import type { Attr, Position } from "../parser/ast.js";
 import { AttributeError, type ClassRegistry } from "./attributes.js";
 import { applyEdgeAttributes } from "./edge-attributes.js";
 
@@ -60,8 +60,12 @@ function newEdge(): DiagramEdge {
 
 const noClasses: ClassRegistry = { get: () => undefined };
 
+// These tests exercise attribute *application*, not position tracking, so
+// every Attr shares this placeholder position.
+const DUMMY_POSITION: Position = { line: 1, column: 1 };
+
 function attr(name: string, value: string | null): Attr {
-  return { type: "Attr", name, value };
+  return { type: "Attr", name, value, position: DUMMY_POSITION };
 }
 
 describe("applyEdgeAttributes", () => {

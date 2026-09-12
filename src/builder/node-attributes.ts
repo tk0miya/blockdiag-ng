@@ -15,6 +15,7 @@ import type { Attr } from "../parser/ast.js";
 import {
   AttributeError,
   assertNever,
+  attachAttrPosition,
   type ClassRegistry,
   parseIntAttr,
   requireValue,
@@ -69,6 +70,15 @@ export function parseLabelOrientation(value: string): LabelOrientation {
 }
 
 export function applyNodeAttribute(target: DiagramNode, attr: Attr, classes: ClassRegistry): void {
+  try {
+    applyNodeAttributeValue(target, attr, classes);
+  } catch (error) {
+    attachAttrPosition(error, attr.position);
+    throw error;
+  }
+}
+
+function applyNodeAttributeValue(target: DiagramNode, attr: Attr, classes: ClassRegistry): void {
   const value = unquote(attr.value);
 
   if (attr.name === "class") {
