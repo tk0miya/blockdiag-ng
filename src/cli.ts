@@ -27,6 +27,17 @@
 // `save()` just does `open(self.filename, ...)` with whatever string it
 // was given), this doesn't special-case `-o -` at all either, for the
 // same reason: ported faithfully, not "improved".
+//
+// `--lint` is this port's own addition, not a port of anything - a tooling
+// feature aimed at AI agents editing the DSL, not part of the DSL itself
+// (the original has no equivalent flag). It runs the same parse/build/layout
+// pipeline used before rendering
+// (so it catches both syntax errors and builder-level ones like an unknown
+// attribute or shape - now with source positions, see attributes.ts) but
+// stops there: no font is loaded, no SVG/PNG is produced or written, and
+// `-o`/`-T` are accepted but simply unused. Success is silent (exit 0,
+// nothing printed) - failure reuses the same `error: ...`-to-stderr path
+// as every other pipeline failure.
 import { readFileSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { buildDiagram } from "./builder/tree-builder.js";
@@ -39,7 +50,7 @@ import { renderPng } from "./render/svg-to-png.js";
 
 const DEFAULT_FONT_PATH = join(import.meta.dirname, "../vendor/vlgothic/VL-Gothic-Regular.ttf");
 
-const USAGE = "usage: blockdiag [-o FILE] [-T svg|png] infile";
+const USAGE = "usage: blockdiag [-o FILE] [-T svg|png] [--lint] infile";
 
 type OutputType = "svg" | "png";
 
@@ -54,6 +65,7 @@ interface CliArgs {
   readonly input: string | null;
   readonly output: string | null;
   readonly type: OutputType;
+  readonly lint: boolean;
 }
 
 function parseType(value: string): OutputType {
@@ -68,6 +80,7 @@ export function parseArgs(argv: readonly string[]): CliArgs {
   let input: string | null = null;
   let output: string | null = null;
   let type: OutputType = "svg";
+  let lint = false;
 
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
@@ -79,6 +92,8 @@ export function parseArgs(argv: readonly string[]): CliArgs {
       i++;
       if (i >= argv.length) throw new Error("-T requires a TYPE argument");
       type = parseType(argv[i]);
+    } else if (arg === "--lint") {
+      lint = true;
     } else if (input === null) {
       input = arg;
     } else {
@@ -86,7 +101,7 @@ export function parseArgs(argv: readonly string[]): CliArgs {
     }
   }
 
-  return { input, output, type };
+  return { input, output, type, lint };
 }
 
 // Ported from `codecs.open(path, 'r', 'utf-8-sig')`: strips a leading
@@ -134,6 +149,11 @@ export function run(argv: readonly string[]): number {
     const diagram = buildDiagram(parseString(source));
     layoutDiagram(diagram);
     markSkippedEdges(diagram);
+
+    if (args.lint) {
+      return 0;
+    }
+
     const font = loadFont(DEFAULT_FONT_PATH);
     const svg = renderDiagramToSvg(diagram, { font });
 
