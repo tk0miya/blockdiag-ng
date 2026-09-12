@@ -9,7 +9,14 @@
 // overrides to mean `default_fontsize` instead of a field of its own.
 import type { Diagram, EdgeLayout, ShadowStyle } from "../model/elements.js";
 import type { Attr } from "../parser/ast.js";
-import { AttributeError, type ClassRegistry, parseIntAttr, requireValue, resolveClass } from "./attributes.js";
+import {
+  AttributeError,
+  attachAttrPosition,
+  type ClassRegistry,
+  parseIntAttr,
+  requireValue,
+  resolveClass,
+} from "./attributes.js";
 import { parseColor } from "./color.js";
 import type { BuildDefaults } from "./factory.js";
 import { applyGroupAttribute } from "./group-attributes.js";
@@ -35,6 +42,20 @@ function parseEdgeLayout(value: string): EdgeLayout {
 }
 
 export function applyDiagramAttribute(
+  diagram: Diagram,
+  defaults: BuildDefaults,
+  attr: Attr,
+  classes: ClassRegistry,
+): void {
+  try {
+    applyDiagramAttributeValue(diagram, defaults, attr, classes);
+  } catch (error) {
+    attachAttrPosition(error, attr.position);
+    throw error;
+  }
+}
+
+function applyDiagramAttributeValue(
   diagram: Diagram,
   defaults: BuildDefaults,
   attr: Attr,
