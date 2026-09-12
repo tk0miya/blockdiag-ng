@@ -15,6 +15,7 @@ import type { Attr } from "../parser/ast.js";
 import {
   AttributeError,
   assertNever,
+  attachAttrPosition,
   type ClassRegistry,
   parseIntAttr,
   requireValue,
@@ -124,6 +125,15 @@ function setHstyle(target: DiagramEdge, rawValue: string): void {
 }
 
 export function applyEdgeAttribute(target: DiagramEdge, attr: Attr, classes: ClassRegistry): void {
+  try {
+    applyEdgeAttributeValue(target, attr, classes);
+  } catch (error) {
+    attachAttrPosition(error, attr.position);
+    throw error;
+  }
+}
+
+function applyEdgeAttributeValue(target: DiagramEdge, attr: Attr, classes: ClassRegistry): void {
   const value = unquote(attr.value);
 
   if (attr.name === "class") {

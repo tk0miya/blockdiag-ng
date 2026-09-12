@@ -14,8 +14,11 @@
 
 import colorNames from "color-name";
 import type { Color } from "../model/elements.js";
+import type { Position } from "../parser/ast.js";
 
-export class ColorParseError extends Error {}
+export class ColorParseError extends Error {
+  position: Position | undefined;
+}
 
 export function parseColor(input: string): Color {
   if (input === "none") {
