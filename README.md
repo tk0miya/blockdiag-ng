@@ -10,12 +10,13 @@ later steps), but its CLI can already be built and run from a checkout:
 ```sh
 npm run build
 node dist/cli.js diagram.diag          # writes diagram.svg next to it
+node dist/cli.js diagram.diag -T png   # writes diagram.png instead
 node dist/cli.js diagram.diag -o out.svg
 cat diagram.diag | node dist/cli.js -  # reads from stdin
 ```
 
-Only SVG output exists so far - PNG (`-T`), font selection (`-f`/
-`--fontmap`), and every other option the original CLI supports are
+Only SVG and PNG output exist so far - font selection (`-f`/
+`--fontmap`) and every other option the original CLI supports are
 later steps.
 
 ## License

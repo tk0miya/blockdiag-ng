@@ -30,6 +30,7 @@
     "vitest": "^5.0.0"
   },
   "dependencies": {
+    "@resvg/resvg-js": "2.6.2",
     "color-name": "^2.1.1",
     "fontkit": "^2.0.4"
   }

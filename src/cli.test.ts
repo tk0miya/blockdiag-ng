@@ -5,13 +5,30 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { parseArgs, run } from "./cli.js";
 
 describe("parseArgs", () => {
-  it("takes the first bare argument as the input path", () => {
-    expect(parseArgs(["diagram.diag"])).toEqual({ input: "diagram.diag", output: null });
+  it("takes the first bare argument as the input path, defaulting type to svg", () => {
+    expect(parseArgs(["diagram.diag"])).toEqual({ input: "diagram.diag", output: null, type: "svg" });
   });
 
   it("reads -o's own following argument as the output path", () => {
-    expect(parseArgs(["diagram.diag", "-o", "out.svg"])).toEqual({ input: "diagram.diag", output: "out.svg" });
-    expect(parseArgs(["-o", "out.svg", "diagram.diag"])).toEqual({ input: "diagram.diag", output: "out.svg" });
+    expect(parseArgs(["diagram.diag", "-o", "out.svg"])).toEqual({
+      input: "diagram.diag",
+      output: "out.svg",
+      type: "svg",
+    });
+    expect(parseArgs(["-o", "out.svg", "diagram.diag"])).toEqual({
+      input: "diagram.diag",
+      output: "out.svg",
+      type: "svg",
+    });
+  });
+
+  it("reads -T's own following argument as the output type, case-insensitively", () => {
+    expect(parseArgs(["diagram.diag", "-T", "png"])).toEqual({ input: "diagram.diag", output: null, type: "png" });
+    expect(parseArgs(["diagram.diag", "-T", "PNG"])).toEqual({ input: "diagram.diag", output: null, type: "png" });
+  });
+
+  it("throws for an unknown -T value", () => {
+    expect(() => parseArgs(["diagram.diag", "-T", "pdf"])).toThrow(/unknown format/);
   });
 
   it("leaves input null for a missing input path, rather than throwing", () => {
@@ -20,11 +37,15 @@ describe("parseArgs", () => {
     // `len(self.args) == 0` check just prints help and exits 0) - so
     // `run()` needs to tell this apart from the cases that do throw
     // here, to print plain usage instead of an "error: ..." message.
-    expect(parseArgs([])).toEqual({ input: null, output: null });
+    expect(parseArgs([])).toEqual({ input: null, output: null, type: "svg" });
   });
 
   it("throws for -o with nothing after it", () => {
     expect(() => parseArgs(["diagram.diag", "-o"])).toThrow(/-o requires/);
+  });
+
+  it("throws for -T with nothing after it", () => {
+    expect(() => parseArgs(["diagram.diag", "-T"])).toThrow(/-T requires/);
   });
 
   it("throws for more than one bare argument", () => {
@@ -66,6 +87,14 @@ describe("run", () => {
     writeFileSync(input, "﻿diagram { A -> B; }");
     expect(run([input])).toBe(0);
     expect(readFileSync(join(dir, "sample.svg"), "utf-8")).toContain(">A<");
+  });
+
+  it("renders a real PNG (not SVG) to a default-named .png file for -T png", () => {
+    const input = join(dir, "sample.diag");
+    writeFileSync(input, "diagram { A -> B; }");
+    expect(run([input, "-T", "png"])).toBe(0);
+    const output = readFileSync(join(dir, "sample.png"));
+    expect(output.subarray(0, 8)).toEqual(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]));
   });
 
   // Reading from stdin (`-` as the input path) is exercised manually
