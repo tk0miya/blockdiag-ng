@@ -1,25 +1,44 @@
 {
   "name": "blockdiag",
-  "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "version": "0.1.0",
+  "description": "A TypeScript successor to blockdiag, a text-to-diagram generator for block diagrams.",
   "type": "module",
+  "bin": {
+    "blockdiag": "dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "vendor/vlgothic"
+  ],
   "engines": {
     "node": ">=24"
   },
   "imports": {
     "#/*": "./src/*"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tk0miya/blockdiag-ng.git"
+  },
+  "bugs": "https://github.com/tk0miya/blockdiag-ng/issues",
+  "homepage": "https://github.com/tk0miya/blockdiag-ng#readme",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "test": "vitest run --passWithNoTests",
     "typecheck": "tsc --noEmit",
     "lint": "biome check .",
     "lint:fix": "biome check --write .",
-    "ci": "npm run lint && npm run typecheck && npm test"
+    "ci": "npm run lint && npm run typecheck && npm run build && npm test",
+    "prepublishOnly": "npm run ci"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": [
+    "blockdiag",
+    "diagram",
+    "svg",
+    "png",
+    "cli"
+  ],
+  "author": "Takeshi Komiya",
   "license": "Apache-2.0",
   "devDependencies": {
     "@biomejs/biome": "^2.5.12",
