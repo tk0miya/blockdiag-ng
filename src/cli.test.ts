@@ -39,6 +39,15 @@ describe("parseArgs", () => {
     });
   });
 
+  it("accepts ast as a -T value", () => {
+    expect(parseArgs(["diagram.diag", "-T", "ast"])).toEqual({
+      input: "diagram.diag",
+      output: null,
+      type: "ast",
+      lint: false,
+    });
+  });
+
   it("recognizes --lint as a boolean flag, regardless of position", () => {
     expect(parseArgs(["diagram.diag", "--lint"])).toEqual({
       input: "diagram.diag",
@@ -201,6 +210,68 @@ describe("run", () => {
       writeFileSync(input, "diagram { A -> B; }");
       expect(run([input, "--lint", "-o", join(dir, "elsewhere.svg"), "-T", "png"])).toBe(0);
       expect(() => readFileSync(join(dir, "elsewhere.svg"))).toThrow();
+    });
+
+    it("ignores -T ast too, still validating (and rejecting) via buildDiagram rather than just dumping the AST", () => {
+      const input = join(dir, "bad-attr.diag");
+      writeFileSync(input, "diagram {\n  A [shape = hexagon];\n}");
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      const exitCode = run([input, "--lint", "-T", "ast"]);
+      expect(exitCode).toBe(1);
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringMatching(/unknown node shape/));
+      expect(() => readFileSync(join(dir, "bad-attr.json"))).toThrow();
+      stderrSpy.mockRestore();
+    });
+  });
+
+  describe("-T ast", () => {
+    it("writes the parsed AST as JSON to a default-named .json file", () => {
+      const input = join(dir, "sample.diag");
+      writeFileSync(input, "diagram { A -> B; }");
+      expect(run([input, "-T", "ast"])).toBe(0);
+      const ast = JSON.parse(readFileSync(join(dir, "sample.json"), "utf-8"));
+      expect(ast.type).toBe("Diagram");
+      expect(ast.stmts).toEqual([{ type: "Edge", fromNodes: ["A"], edgeType: "->", toNodes: ["B"], attrs: [] }]);
+    });
+
+    it("only validates syntax, not builder-level attributes", () => {
+      // Unlike --lint, -T ast never calls buildDiagram(), so an unknown
+      // shape value (a builder-level error) doesn't stop it from writing
+      // the AST - only a genuine parse error would.
+      const input = join(dir, "bad-attr.diag");
+      const output = join(dir, "bad-attr.json");
+      writeFileSync(input, "diagram { A [shape = hexagon]; }");
+      expect(run([input, "-T", "ast", "-o", output])).toBe(0);
+      expect(JSON.parse(readFileSync(output, "utf-8")).type).toBe("Diagram");
+    });
+
+    it("round-trips: an AST JSON file dumped by -T ast is accepted back as input", () => {
+      const diagInput = join(dir, "sample.diag");
+      const astPath = join(dir, "sample.json");
+      writeFileSync(diagInput, "diagram { A -> B; }");
+      expect(run([diagInput, "-T", "ast", "-o", astPath])).toBe(0);
+
+      const svgOutput = join(dir, "roundtrip.svg");
+      expect(run([astPath, "-o", svgOutput])).toBe(0);
+      expect(readFileSync(svgOutput, "utf-8")).toContain(">A<");
+    });
+
+    it("rejects JSON input that isn't a Diagram AST, rather than misreading it as DSL", () => {
+      const input = join(dir, "not-an-ast.json");
+      writeFileSync(input, '{"foo": "bar"}');
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      const exitCode = run([input]);
+      expect(exitCode).toBe(1);
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("not a Diagram AST"));
+      stderrSpy.mockRestore();
+    });
+
+    it("still accepts a bare `{}` as an empty DSL diagram, even though it also happens to be valid JSON", () => {
+      const input = join(dir, "empty.diag");
+      writeFileSync(input, "{}");
+      expect(run([input, "-T", "ast"])).toBe(0);
+      const ast = JSON.parse(readFileSync(join(dir, "empty.json"), "utf-8"));
+      expect(ast).toEqual({ type: "Diagram", header: null, stmts: [] });
     });
   });
 });
