@@ -50,7 +50,7 @@
 // only falls back to the DSL parser if that fails or doesn't look like a
 // Diagram AST - a round-tripped `-T ast` file, or a hand/AI-authored one,
 // is accepted anywhere a `.diag` file is.
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, realpathSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { buildDiagram } from "./builder/tree-builder.js";
 import { markSkippedEdges } from "./layout/edge-routing.js";
@@ -223,6 +223,17 @@ export function run(argv: readonly string[]): number {
   }
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// realpathSync, not a plain `file://${process.argv[1]}` comparison: an
+// installed package's own `bin` entry is a symlink (e.g. `npm`'s own
+// `node_modules/.bin/blockdiag` -> `../blockdiag/dist/cli.js`), and
+// `import.meta.url` reflects the resolved real path, not the symlink path
+// argv[1] holds - so the naive comparison always fails for exactly the
+// case that matters most (an installed CLI actually being run), silently
+// doing nothing (this module only defines functions at that point) rather
+// than erroring, which is what made it easy to miss. `process.argv[1]` is
+// checked first since it's only ever absent when this module is imported
+// rather than run as a script (e.g. `node --eval`) - realpathSync(undefined)
+// throws, and there's nothing to run in that case anyway.
+if (process.argv[1] !== undefined && import.meta.url === `file://${realpathSync(process.argv[1])}`) {
   process.exit(run(process.argv.slice(2)));
 }
