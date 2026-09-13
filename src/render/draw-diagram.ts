@@ -3,9 +3,9 @@
 // background skeleton (`_draw_background()`'s group backgrounds and node
 // shadows), node rendering (`_draw_elements()`'s node loop,
 // `DiagramDraw.node()`) for the shapes ported so far, and edges
-// (`draw-edges.ts`, restricted for now to a `landscape`-oriented group
-// under the default `edge_layout` - see that file). Group borders/labels
-// are added in a later step.
+// (`draw-edges.ts` - every orientation/`edge_layout` combination the
+// original itself supports). Group borders/labels are added in a later
+// step.
 import type { AnyGroup, Diagram, DiagramNode, NodeGroup } from "../model/elements.js";
 import { drawEdges } from "./draw-edges.js";
 import type { Font } from "./font-metrics.js";
