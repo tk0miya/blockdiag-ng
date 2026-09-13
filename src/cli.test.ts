@@ -6,7 +6,7 @@ import { parseArgs, run } from "./cli.js";
 
 describe("parseArgs", () => {
   it("takes the first bare argument as the input path, defaulting type to svg", () => {
-    expect(parseArgs(["diagram.diag"])).toEqual({ input: "diagram.diag", output: null, type: "svg" });
+    expect(parseArgs(["diagram.diag"])).toEqual({ input: "diagram.diag", output: null, type: "svg", lint: false });
   });
 
   it("reads -o's own following argument as the output path", () => {
@@ -14,17 +14,44 @@ describe("parseArgs", () => {
       input: "diagram.diag",
       output: "out.svg",
       type: "svg",
+      lint: false,
     });
     expect(parseArgs(["-o", "out.svg", "diagram.diag"])).toEqual({
       input: "diagram.diag",
       output: "out.svg",
       type: "svg",
+      lint: false,
     });
   });
 
   it("reads -T's own following argument as the output type, case-insensitively", () => {
-    expect(parseArgs(["diagram.diag", "-T", "png"])).toEqual({ input: "diagram.diag", output: null, type: "png" });
-    expect(parseArgs(["diagram.diag", "-T", "PNG"])).toEqual({ input: "diagram.diag", output: null, type: "png" });
+    expect(parseArgs(["diagram.diag", "-T", "png"])).toEqual({
+      input: "diagram.diag",
+      output: null,
+      type: "png",
+      lint: false,
+    });
+    expect(parseArgs(["diagram.diag", "-T", "PNG"])).toEqual({
+      input: "diagram.diag",
+      output: null,
+      type: "png",
+      lint: false,
+    });
+  });
+
+  it("recognizes --lint as a boolean flag, regardless of position", () => {
+    expect(parseArgs(["diagram.diag", "--lint"])).toEqual({
+      input: "diagram.diag",
+      output: null,
+      type: "svg",
+      lint: true,
+    });
+    expect(parseArgs(["--lint", "diagram.diag"])).toEqual({
+      input: "diagram.diag",
+      output: null,
+      type: "svg",
+      lint: true,
+    });
   });
 
   it("throws for an unknown -T value", () => {
@@ -37,7 +64,7 @@ describe("parseArgs", () => {
     // `len(self.args) == 0` check just prints help and exits 0) - so
     // `run()` needs to tell this apart from the cases that do throw
     // here, to print plain usage instead of an "error: ..." message.
-    expect(parseArgs([])).toEqual({ input: null, output: null, type: "svg" });
+    expect(parseArgs([])).toEqual({ input: null, output: null, type: "svg", lint: false });
   });
 
   it("throws for -o with nothing after it", () => {
@@ -144,5 +171,36 @@ describe("run", () => {
     expect(exitCode).toBe(1);
     expect(stderrSpy).toHaveBeenCalledWith(expect.stringContaining("error:"));
     stderrSpy.mockRestore();
+  });
+
+  describe("--lint", () => {
+    it("exits 0 without writing any output file for valid input", () => {
+      const input = join(dir, "sample.diag");
+      writeFileSync(input, "diagram { A -> B; }");
+      expect(run([input, "--lint"])).toBe(0);
+      expect(() => readFileSync(join(dir, "sample.svg"))).toThrow();
+      expect(() => readFileSync(join(dir, "sample.png"))).toThrow();
+    });
+
+    it("still catches a builder-level error (unknown shape value), with its source position", () => {
+      // The syntax-error path (a malformed .diag file) isn't re-tested here:
+      // args.lint is only checked after parseString/buildDiagram already
+      // succeeded, so a syntax error takes the exact same code path with or
+      // without --lint, already covered above.
+      const input = join(dir, "bad-attr.diag");
+      writeFileSync(input, "diagram {\n  A [shape = hexagon];\n}");
+      const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation(() => true);
+      const exitCode = run([input, "--lint"]);
+      expect(exitCode).toBe(1);
+      expect(stderrSpy).toHaveBeenCalledWith(expect.stringMatching(/unknown node shape.*at 2:/));
+      stderrSpy.mockRestore();
+    });
+
+    it("ignores -o and -T, since neither applies without rendering", () => {
+      const input = join(dir, "sample.diag");
+      writeFileSync(input, "diagram { A -> B; }");
+      expect(run([input, "--lint", "-o", join(dir, "elsewhere.svg"), "-T", "png"])).toBe(0);
+      expect(() => readFileSync(join(dir, "elsewhere.svg"))).toThrow();
+    });
   });
 });
