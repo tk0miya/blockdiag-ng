@@ -1,8 +1,9 @@
 // Ported from `noderenderer/diamond.py`: a diamond whose four points
 // extend `cellsize` beyond the midpoint of each of the node's own box
 // edges, with its label inset to the (smaller) box those points'
-// midpoints describe. Plus its shadow branch. A background image is
-// deferred to a later step, same as box.ts.
+// midpoints describe. Plus its shadow branch and a `background` image,
+// drawn into that same inset box, over the diamond's own fill and under
+// its outline (so the outline stays crisp on top of it).
 import type { DiagramNode } from "../../model/elements.js";
 import type { Box, Point } from "../geometry.js";
 import { boxBottom, boxLeft, boxRight, boxTop } from "../geometry.js";
@@ -35,15 +36,22 @@ export function renderDiamondNode(
     return;
   }
 
-  doc.polygon(connectors, { fill: node.color, outline: node.linecolor, style: node.style });
+  const textBox: Box = {
+    x1: Math.floor((top.x + left.x) / 2),
+    y1: Math.floor((top.y + left.y) / 2),
+    x2: Math.floor((right.x + bottom.x) / 2),
+    y2: Math.floor((right.y + bottom.y) / 2),
+  };
+
+  if (node.background !== null) {
+    doc.polygon(connectors, { fill: node.color, outline: node.color });
+    doc.image(textBox, node.background);
+    doc.polygon(connectors, { outline: node.linecolor, style: node.style });
+  } else {
+    doc.polygon(connectors, { fill: node.color, outline: node.linecolor, style: node.style });
+  }
 
   if (node.label !== null) {
-    const textBox: Box = {
-      x1: Math.floor((top.x + left.x) / 2),
-      y1: Math.floor((top.y + left.y) / 2),
-      x2: Math.floor((right.x + bottom.x) / 2),
-      y2: Math.floor((right.y + bottom.y) / 2),
-    };
     doc.textarea(textBox, node.label, mode.font, mode.fontSize, { fill: node.textcolor, halign: "center" });
   }
 }

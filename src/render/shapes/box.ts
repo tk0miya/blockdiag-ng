@@ -4,12 +4,13 @@
 // label - see render-mode.ts). The number badge (`numbered`) and `icon`
 // are shape-independent, so they're wired up once in draw-diagram.ts
 // (number-badge.ts/icon.ts) rather than here - `box` only narrows its
-// own label to leave room for an icon (icon.ts's `textBoxFor()`), since
-// it's one of the few shapes that doesn't already override its own
-// textbox unconditionally (see icon.ts). A `background` image and
-// `stacked` are deferred to later steps. `rotate`/
-// `label_orientation = "vertical"` are deferred too (see
-// text-folder.ts/svg-document.ts).
+// own label/background to leave room for an icon (icon.ts's
+// `textBoxFor()`), since it's one of the few shapes that doesn't already
+// override its own textbox unconditionally (see icon.ts). A
+// `background` image draws over the box's own fill and under its
+// outline (so the outline stays crisp on top of it). `stacked` is
+// deferred to a later step. `rotate`/`label_orientation = "vertical"`
+// are deferred too (see text-folder.ts/svg-document.ts).
 import type { DiagramNode } from "../../model/elements.js";
 import { textBoxFor } from "../icon.js";
 import type { DiagramMetrics } from "../metrics.js";
@@ -26,7 +27,13 @@ export function renderBoxNode(doc: SvgDocument, metrics: DiagramMetrics, node: D
     return;
   }
 
-  doc.rectangle(box, { fill: node.color, outline: node.linecolor, style: node.style });
+  if (node.background !== null) {
+    doc.rectangle(box, { fill: node.color, outline: node.color });
+    doc.image(textBoxFor(metrics, node, box), node.background);
+    doc.rectangle(box, { outline: node.linecolor, style: node.style });
+  } else {
+    doc.rectangle(box, { fill: node.color, outline: node.linecolor, style: node.style });
+  }
 
   // A bare `label;` attribute (no value) sets the label to `null` rather
   // than an empty string - the original crashes trying to render this
