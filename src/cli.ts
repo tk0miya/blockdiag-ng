@@ -38,11 +38,24 @@
 // `-o`/`-T` are accepted but simply unused. Success is silent (exit 0,
 // nothing printed) - failure reuses the same `error: ...`-to-stderr path
 // as every other pipeline failure.
+//
+// `-T ast` is likewise this port's own addition - another AI-agent-facing
+// tooling feature, not part of the DSL, and not something the original has
+// an equivalent of. It writes the parsed tree itself (`DiagramAst`, see
+// parser/ast.ts) as JSON, lighter still than `--lint`: just parseString(),
+// no buildDiagram()/layoutDiagram() (so it validates syntax only, not
+// builder-level attributes/shapes - `--lint` is what to reach for when
+// that matters). The reverse direction (JSON as input) needs no separate
+// flag: parseSource() below tries JSON.parse() on the input first, and
+// only falls back to the DSL parser if that fails or doesn't look like a
+// Diagram AST - a round-tripped `-T ast` file, or a hand/AI-authored one,
+// is accepted anywhere a `.diag` file is.
 import { readFileSync, writeFileSync } from "node:fs";
 import { extname, join } from "node:path";
 import { buildDiagram } from "./builder/tree-builder.js";
 import { markSkippedEdges } from "./layout/edge-routing.js";
 import { layoutDiagram } from "./layout/group-layout.js";
+import type { DiagramAst } from "./parser/ast.js";
 import { parseString } from "./parser/parser.js";
 import { renderDiagramToSvg } from "./render/draw-diagram.js";
 import { loadFont } from "./render/font-metrics.js";
@@ -50,9 +63,14 @@ import { renderPng } from "./render/svg-to-png.js";
 
 const DEFAULT_FONT_PATH = join(import.meta.dirname, "../vendor/vlgothic/VL-Gothic-Regular.ttf");
 
-const USAGE = "usage: blockdiag [-o FILE] [-T svg|png] [--lint] infile";
+const USAGE = "usage: blockdiag [-o FILE] [-T svg|png|ast] [--lint] infile";
 
-type OutputType = "svg" | "png";
+type OutputType = "svg" | "png" | "ast";
+
+// The file extension `defaultOutputPath` uses for each `-T` value - not
+// simply the type name itself, since "ast" writes JSON, not a made-up
+// ".ast" file.
+const OUTPUT_EXTENSIONS: Record<OutputType, string> = { svg: "svg", png: "png", ast: "json" };
 
 interface CliArgs {
   // `null` means no positional infile was given - ported from
@@ -70,7 +88,7 @@ interface CliArgs {
 
 function parseType(value: string): OutputType {
   const normalized = value.toLowerCase();
-  if (normalized !== "svg" && normalized !== "png") {
+  if (normalized !== "svg" && normalized !== "png" && normalized !== "ast") {
     throw new Error(`unknown format: ${value}`);
   }
   return normalized;
@@ -126,7 +144,34 @@ function stripBom(text: string): string {
 function defaultOutputPath(input: string, type: OutputType): string {
   const ext = extname(input);
   const withoutExt = ext === "" ? input : input.slice(0, -ext.length);
-  return `${withoutExt}.${type}`;
+  return `${withoutExt}.${OUTPUT_EXTENSIONS[type]}`;
+}
+
+// Accepts either DSL source or a previously-dumped `-T ast` JSON file as
+// input: tries JSON.parse() first, since real DSL source essentially never
+// happens to also be valid JSON (bare identifiers and unquoted keys aren't
+// legal JSON) - except "{}" (and other all-whitespace bodies), which is
+// simultaneously valid JSON *and* a valid, if degenerate, empty diagram -
+// so a JSON parse that doesn't look like a Diagram AST falls back to the
+// DSL parser too, rather than being rejected outright; only a source that
+// fails *both* is reported as "not a Diagram AST" (the DSL parser's own
+// error, e.g. for `{"foo": "bar"}`, would otherwise be a confusing way to
+// say the same thing).
+function parseSource(source: string): DiagramAst {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(source);
+  } catch {
+    return parseString(source);
+  }
+  if (typeof parsed === "object" && parsed !== null && (parsed as { type?: unknown }).type === "Diagram") {
+    return parsed as DiagramAst;
+  }
+  try {
+    return parseString(source);
+  } catch {
+    throw new Error('input parses as JSON but is not a Diagram AST (expected a top-level "type": "Diagram")');
+  }
 }
 
 export function run(argv: readonly string[]): number {
@@ -146,7 +191,15 @@ export function run(argv: readonly string[]): number {
 
   try {
     const source = stripBom(input === "-" ? readFileSync(0, "utf-8") : readFileSync(input, "utf-8"));
-    const diagram = buildDiagram(parseString(source));
+    const ast = parseSource(source);
+
+    if (args.type === "ast" && !args.lint) {
+      const outputPath = args.output ?? defaultOutputPath(input, args.type);
+      writeFileSync(outputPath, JSON.stringify(ast, null, 2));
+      return 0;
+    }
+
+    const diagram = buildDiagram(ast);
     layoutDiagram(diagram);
     markSkippedEdges(diagram);
 
