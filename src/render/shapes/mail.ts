@@ -1,7 +1,7 @@
 // Ported from `noderenderer/mail.py`: a box with an envelope's "flap"
 // line drawn across its top, and a label inset below the flap. Plus its
 // shadow branch - the flap line is skipped for shadow, same as the
-// fold crease in note.ts. A background image is deferred to Step 17c,
+// fold crease in note.ts. A background image is deferred to a later step,
 // same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Box } from "../geometry.js";

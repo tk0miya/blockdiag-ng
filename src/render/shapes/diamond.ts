@@ -2,7 +2,7 @@
 // extend `cellsize` beyond the midpoint of each of the node's own box
 // edges, with its label inset to the (smaller) box those points'
 // midpoints describe. Plus its shadow branch. A background image is
-// deferred to Step 17c, same as box.ts.
+// deferred to a later step, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Box, Point } from "../geometry.js";
 import { boxBottom, boxLeft, boxRight, boxTop } from "../geometry.js";

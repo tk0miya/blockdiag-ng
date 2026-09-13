@@ -1,7 +1,7 @@
 // Ported from `noderenderer/flowchart/loopout.py`: a box with its
 // bottom-right corner notched inward - the mirror image of `loopin`'s
 // notch. Plus its shadow branch. A background image is deferred to
-// Step 17c, same as box.ts.
+// a later step, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Box } from "../geometry.js";
 import { boxBottomLeft, boxBottomRight, boxTopLeft, boxTopRight } from "../geometry.js";

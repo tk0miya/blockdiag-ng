@@ -118,6 +118,22 @@ describe("SvgDocument", () => {
     });
   });
 
+  describe("image", () => {
+    it("references the given path directly, rather than embedding its content", () => {
+      const doc = new SvgDocument();
+      doc.image({ x1: 10, y1: 20, x2: 42, y2: 36 }, "icons/example.png");
+      expect(doc.toString({ width: 100, height: 100 })).toContain(
+        '<image x="10" y="20" width="32" height="16" xlink:href="icons/example.png"/>',
+      );
+    });
+
+    it("escapes an ampersand, a less-than sign, or a double quote in the path", () => {
+      const doc = new SvgDocument();
+      doc.image({ x1: 0, y1: 0, x2: 10, y2: 10 }, 'a&b<c".png');
+      expect(doc.toString({ width: 10, height: 10 })).toContain('xlink:href="a&amp;b&lt;c&quot;.png"');
+    });
+  });
+
   describe("line", () => {
     // A multi-point line becomes one <path> per consecutive pair of
     // points, not one path with multiple segments - verified against

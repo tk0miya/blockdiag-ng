@@ -3,9 +3,10 @@
 // background skeleton (`_draw_background()`'s group backgrounds and node
 // shadows) plus node rendering (`_draw_elements()`'s node loop,
 // `DiagramDraw.node()`) for the shapes ported so far. Edges, group
-// borders/labels, and icons are added in later steps.
+// borders/labels, and a `background` image are added in later steps.
 import type { AnyGroup, Diagram, DiagramNode, NodeGroup } from "../model/elements.js";
 import type { Font } from "./font-metrics.js";
+import { drawIcon } from "./icon.js";
 import { collectAllNodes, createDiagramMetrics, type DiagramMetrics, marginBox, nodeBox, pageSize } from "./metrics.js";
 import { drawNumberBadge } from "./number-badge.js";
 import type { RenderMode } from "./render-mode.js";
@@ -113,6 +114,15 @@ function drawNodes(
     const fontSize = node.fontsize ?? defaultFontSize;
     const mode: RenderMode = { kind: "normal", font, fontSize };
     rendererFor(node.shape)(doc, metrics, node, mode);
+    // The original draws the icon between a shape's own fill and its
+    // label, so an overlapping label (only possible for a shape that
+    // doesn't narrow its own textbox to avoid the icon - see icon.ts)
+    // ends up on top of it. Every shape here draws its fill and label
+    // together in one call above, so this ends up after both instead -
+    // a label overlapping an icon wins there, not here. Deliberately
+    // left as a divergence (see README) rather than restructuring every
+    // shape to draw its own label separately just for this.
+    drawIcon(doc, metrics, node);
     drawNumberBadge(doc, metrics, font, fontSize, node);
   }
 }

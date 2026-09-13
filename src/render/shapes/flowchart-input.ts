@@ -1,6 +1,6 @@
 // Ported from `noderenderer/flowchart/input.py`: a parallelogram,
 // slanted inward at the top. Plus its shadow branch. A background
-// image is deferred to Step 17c, same as box.ts.
+// image is deferred to a later step, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Box } from "../geometry.js";
 import { boxBottomLeft, boxBottomRight, boxTopLeft, boxTopRight } from "../geometry.js";

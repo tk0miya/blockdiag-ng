@@ -1,6 +1,6 @@
 // Ported from `noderenderer/flowchart/loopin.py`: a box with its
 // top-left corner notched inward, like a flag. Plus its shadow branch.
-// A background image is deferred to Step 17c, same as box.ts.
+// A background image is deferred to a later step, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Box } from "../geometry.js";
 import { boxBottomLeft, boxBottomRight, boxTopLeft, boxTopRight } from "../geometry.js";

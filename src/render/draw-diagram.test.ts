@@ -13,6 +13,8 @@ import { loadFont } from "./font-metrics.js";
 // and configured with the same bundled test font used here.
 
 const VL_GOTHIC_PATH = join(import.meta.dirname, "../../vendor/vlgothic/VL-Gothic-Regular.ttf");
+const ICON_PATH = join(import.meta.dirname, "test-fixtures/icon.png");
+const LARGE_ICON_PATH = join(import.meta.dirname, "test-fixtures/icon-large.png");
 
 function svg(source: string): string {
   const diagram = buildDiagram(parseString(source));
@@ -386,6 +388,55 @@ describe("renderDiagramToSvg", () => {
       expect(output).toContain(
         '<ellipse cx="64" cy="40" rx="12" ry="12" fill="rgb(255,192,203)" stroke="rgb(0,0,0)"/>',
       );
+    });
+  });
+
+  // Expected values here are derived from the metrics/icon formulas
+  // directly (see icon.ts), not captured from a live Python run like the
+  // rest of this file - there's no real image file path to feed through
+  // an equivalent original run in this environment.
+  describe("icon", () => {
+    it("draws a box node's icon flush against its top-left corner, vertically centered", () => {
+      const output = svg(`diagram { A [label = "Hi", icon = "${ICON_PATH}"]; }`);
+      // icon.png is 32x16 - already within half the default node width
+      // (64) and the full node height (40), so it draws unscaled.
+      expect(output).toContain(`<image x="64" y="52" width="32" height="16" xlink:href="${ICON_PATH}"/>`);
+    });
+
+    it("scales a too-large icon down to fit, preserving aspect ratio", () => {
+      const output = svg(`diagram { A [label = "Hi", icon = "${LARGE_ICON_PATH}"]; }`);
+      // icon-large.png is 200x100, bounded to 64x40: scales to 64x32
+      // (see images.test.ts's calcImageSize cases for the same math).
+      expect(output).toContain(`<image x="64" y="44" width="64" height="32" xlink:href="${LARGE_ICON_PATH}"/>`);
+    });
+
+    it("draws an icon for a shape that doesn't narrow its own label around it", () => {
+      // circle overrides its own textbox unconditionally (see
+      // shapes/circle.ts) - the icon itself still draws regardless,
+      // since render_icon() is shape-independent in the original.
+      const output = svg(`diagram { A [shape = circle, label = "Hi", icon = "${ICON_PATH}"]; }`);
+      expect(output).toContain(`<image x="64" y="52" width="32" height="16" xlink:href="${ICON_PATH}"/>`);
+    });
+
+    it("narrows a box node's label to sit beside its icon, shifting it right by half the icon's width", () => {
+      // Without an icon, "Hi" centers at x=128 (the plain box's own
+      // center - see the "draws a box node's background..." case
+      // above, which places it at 128.5). With this icon (32 wide),
+      // the label's own box narrows to (96, 192) - centering it 16px
+      // further right instead.
+      const withoutIcon = svg('diagram { A [label = "Hi"]; }');
+      const withIcon = svg(`diagram { A [label = "Hi", icon = "${ICON_PATH}"]; }`);
+      const before = withoutIcon.match(/x="([\d.]+)" y="([\d.]+)"[^>]*>Hi</);
+      const after = withIcon.match(/x="([\d.]+)" y="([\d.]+)"[^>]*>Hi</);
+      expect(before).not.toBeNull();
+      expect(after).not.toBeNull();
+      expect(Number(after?.[1]) - Number(before?.[1])).toBeCloseTo(16, 0);
+      expect(Number(after?.[2])).toBeCloseTo(Number(before?.[2]), 0);
+    });
+
+    it("draws no icon for a node without an icon attribute", () => {
+      const output = svg('diagram { A [label = "Hi"]; }');
+      expect(output).not.toContain("<image");
     });
   });
 });
