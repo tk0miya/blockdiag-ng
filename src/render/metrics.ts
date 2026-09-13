@@ -172,6 +172,38 @@ export function marginBox(metrics: DiagramMetrics, box: Box): Box {
   };
 }
 
+// Ported from `NodeMetrics.node_padding` (a fixed constant, never
+// configured by anything - unlike `cellSize`/`nodeWidth`/etc., not worth
+// exposing on `DiagramMetrics` itself since only `coreBox()` needs it).
+const NODE_PADDING = 4;
+
+// Ported from `NodeMetrics.corebox`: a group's own label area when it's
+// `separated` (no nodes of its own to make room for a label above -
+// see `groupLabelBox()`) - inset from the group's own box. The x2/y2
+// inset is double the x1/y1 one, matching the original exactly (not
+// verified as intentional, just ported as-is).
+export function coreBox(box: Box): Box {
+  return {
+    x1: box.x1 + NODE_PADDING,
+    y1: box.y1 + NODE_PADDING,
+    x2: box.x2 - NODE_PADDING * 2,
+    y2: box.y2 - NODE_PADDING * 2,
+  };
+}
+
+// Ported from `NodeMetrics.grouplabelbox`: a strip spanning a group's
+// own full width, sitting just above its own box - where a non-
+// `separated` group's label goes (see draw-diagram.ts's
+// `drawGroupLabels()`).
+export function groupLabelBox(metrics: DiagramMetrics, box: Box): Box {
+  return {
+    x1: box.x1,
+    y1: box.y1 - Math.floor(metrics.spanHeight / 2),
+    x2: box.x2,
+    y2: box.y1,
+  };
+}
+
 // Ported from `SpreadSheetMetrics.pagesize()`. Unlike `nodeBox()`, not
 // expressed as "one more node box query" here - the original does that
 // via a throwaway dummy `DiagramNode`, which would mean fabricating a
