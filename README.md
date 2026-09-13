@@ -25,6 +25,22 @@ Only SVG and PNG output exist so far - font selection (`-f`/
 `--fontmap`) and every other option the original CLI supports are
 later steps.
 
+### As a Claude Code Skill
+
+[`skill/blockdiag`](./skill/blockdiag) packages the CLI as a
+[Claude Code Skill](https://docs.claude.com/en/docs/claude-code/skills):
+`SKILL.md` teaches Claude the DSL and when to reach for this tool, so it
+can write and render `.diag` files on request instead of only producing a
+description of a diagram in text. Install it locally:
+
+```sh
+mkdir -p ~/.claude/skills
+cp -r skill/blockdiag ~/.claude/skills/blockdiag
+```
+
+(or, after `npm install blockdiag`, copy it from
+`node_modules/blockdiag/skill/blockdiag` instead).
+
 ## License
 
 Apache License 2.0. See [LICENSE](./LICENSE).
