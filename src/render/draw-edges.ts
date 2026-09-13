@@ -1,18 +1,18 @@
 // Ported from `DiagramDraw.edge()`/`.edge_label()` (vendor/blockdiag/
-// src/blockdiag/drawer.py), restricted for now to a `landscape`-
-// oriented group under the default (non-`flowchart`) `edge_layout` -
-// `PortraitEdgeMetrics` and the `Flowchart*EdgeMetrics` variants are
-// later steps (18b/18c). An edge whose group doesn't match this yet
-// throws, naming it, rather than silently drawing it wrong - the same
+// src/blockdiag/drawer.py), restricted for now to the default (non-
+// `flowchart`) `edge_layout` - the `Flowchart*EdgeMetrics` variants are
+// a later step (18c). An edge under `edge_layout = flowchart` throws,
+// naming it, rather than silently drawing it wrong - the same
 // "unsupported, not unknown" approach `draw-diagram.ts`'s `rendererFor`
 // takes for a node shape.
 import { collectAllEdges } from "../layout/group-layout.js";
-import type { Diagram, DiagramEdge } from "../model/elements.js";
+import type { Diagram, DiagramEdge, GroupOrientation } from "../model/elements.js";
 import { nodeConnectors } from "./connectors.js";
 import { adjustShaftForHeads, edgeHeads } from "./edge-metrics.js";
 import type { Font } from "./font-metrics.js";
 import { landscapeHeadshapes, landscapeLabelbox, landscapeShaft } from "./landscape-edge-metrics.js";
 import type { DiagramMetrics } from "./metrics.js";
+import { portraitHeadshapes, portraitLabelbox, portraitShaft } from "./portrait-edge-metrics.js";
 import type { SvgDocument } from "./svg-document.js";
 
 const BLACK = [0, 0, 0] as const;
@@ -26,13 +26,16 @@ function drawableEdges(diagram: Diagram): DiagramEdge[] {
   return collectAllEdges(diagram).filter((edge) => edge.style === null || edge.style.type !== "none");
 }
 
-function requireLandscapeNormal(edgeLayout: Diagram["edgeLayout"], edge: DiagramEdge): void {
+// Ported from `DiagramMetrics.edge()`'s own orientation dispatch
+// (`LandscapeEdgeMetrics`/`PortraitEdgeMetrics`) - restricted to those
+// two (not their `Flowchart*` subclasses) for now.
+function edgeMetricsFor(edgeLayout: Diagram["edgeLayout"], orientation: GroupOrientation) {
   if (edgeLayout === "flowchart") {
     throw new Error("edge_layout 'flowchart' is not yet supported");
   }
-  if (edge.node1.group?.orientation !== "landscape") {
-    throw new Error("'portrait' group orientation is not yet supported");
-  }
+  return orientation === "portrait"
+    ? { headshapes: portraitHeadshapes, shaft: portraitShaft, labelbox: portraitLabelbox }
+    : { headshapes: landscapeHeadshapes, shaft: landscapeShaft, labelbox: landscapeLabelbox };
 }
 
 // Ported from `DiagramDraw.edge()`: an edge's own shaft (one or more
@@ -48,12 +51,13 @@ function drawEdge(
   font: Font,
   fontSize: number,
 ): void {
-  requireLandscapeNormal(edgeLayout, edge);
+  const orientation = edge.node1.group?.orientation ?? "landscape";
+  const { headshapes: headshapesFor, shaft: shaftFor } = edgeMetricsFor(edgeLayout, orientation);
 
   const node1 = nodeConnectors(metrics, edge.node1, font, fontSize);
   const node2 = nodeConnectors(metrics, edge.node2, font, fontSize);
-  const headshapes = landscapeHeadshapes(edge);
-  const raw = landscapeShaft(edge, metrics, node1, node2);
+  const headshapes = headshapesFor(edge);
+  const raw = shaftFor(edge, metrics, node1, node2);
   const shaft = adjustShaftForHeads(raw, headshapes, metrics.cellSize);
 
   for (const line of shaft.polylines) {
@@ -85,9 +89,11 @@ function drawEdgeLabel(
   fontSize: number,
 ): void {
   if (edge.label === null || edge.label === "") return;
-  requireLandscapeNormal(edgeLayout, edge);
 
-  const labelbox = landscapeLabelbox(edge, metrics);
+  const orientation = edge.node1.group?.orientation ?? "landscape";
+  const { labelbox: labelboxFor } = edgeMetricsFor(edgeLayout, orientation);
+
+  const labelbox = labelboxFor(edge, metrics);
   doc.textarea(labelbox, edge.label, font, fontSize, { fill: edge.textcolor, outline: BLACK });
 }
 
