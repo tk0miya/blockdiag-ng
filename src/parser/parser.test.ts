@@ -41,8 +41,8 @@ describe("parseString", () => {
         type: "Node",
         id: "A",
         attrs: [
-          { type: "Attr", name: "label", value: '"hello world"' },
-          { type: "Attr", name: "numbered", value: null },
+          { type: "Attr", name: "label", value: '"hello world"', position: expect.any(Object) },
+          { type: "Attr", name: "numbered", value: null, position: expect.any(Object) },
         ],
       },
     ]);
@@ -64,7 +64,11 @@ describe("parseString", () => {
     ];
     for (const [source, expected] of cases) {
       expect(parseString(`{ A [label = ${source}]; }`).stmts, source).toEqual([
-        { type: "Node", id: "A", attrs: [{ type: "Attr", name: "label", value: expected }] },
+        {
+          type: "Node",
+          id: "A",
+          attrs: [{ type: "Attr", name: "label", value: expected, position: expect.any(Object) }],
+        },
       ]);
     }
   });
@@ -76,14 +80,14 @@ describe("parseString", () => {
         fromNodes: ["A"],
         edgeType: "->",
         toNodes: ["B"],
-        attrs: [{ type: "Attr", name: "style", value: "dashed" }],
+        attrs: [{ type: "Attr", name: "style", value: "dashed", position: expect.any(Object) }],
       },
       {
         type: "Edge",
         fromNodes: ["B"],
         edgeType: "->",
         toNodes: ["C"],
-        attrs: [{ type: "Attr", name: "style", value: "dashed" }],
+        attrs: [{ type: "Attr", name: "style", value: "dashed", position: expect.any(Object) }],
       },
     ]);
   });
@@ -97,7 +101,7 @@ describe("parseString", () => {
   it("parses a top-level attribute_stmt", () => {
     const ast = parseString("{ default_shape = box; A; }");
     expect(ast.stmts).toEqual([
-      { type: "Attr", name: "default_shape", value: "box" },
+      { type: "Attr", name: "default_shape", value: "box", position: expect.any(Object) },
       { type: "Node", id: "A", attrs: [] },
     ]);
   });
@@ -121,7 +125,7 @@ describe("parseString", () => {
         type: "Extension",
         kind: "class",
         name: "emphasis",
-        attrs: [{ type: "Attr", name: "color", value: "red" }],
+        attrs: [{ type: "Attr", name: "color", value: "red", position: expect.any(Object) }],
       },
       { type: "Node", id: "A", attrs: [] },
     ]);
@@ -130,7 +134,7 @@ describe("parseString", () => {
         type: "Extension",
         kind: "plugin",
         name: "attributes",
-        attrs: [{ type: "Attr", name: "name", value: "Name" }],
+        attrs: [{ type: "Attr", name: "name", value: "Name", position: expect.any(Object) }],
       },
       { type: "Node", id: "A", attrs: [] },
     ]);
@@ -197,7 +201,7 @@ describe("parseString", () => {
       expect(parseString("{ group; }").stmts).toEqual([{ type: "Node", id: "group", attrs: [] }]);
       expect(parseString("{ class; }").stmts).toEqual([{ type: "Node", id: "class", attrs: [] }]);
       expect(parseString("{ plugin [x=1]; }").stmts).toEqual([
-        { type: "Node", id: "plugin", attrs: [{ type: "Attr", name: "x", value: "1" }] },
+        { type: "Node", id: "plugin", attrs: [{ type: "Attr", name: "x", value: "1", position: expect.any(Object) }] },
       ]);
     });
 
@@ -209,7 +213,9 @@ describe("parseString", () => {
     });
 
     it("as an attribute_stmt name", () => {
-      expect(parseString("{ group = foo; }").stmts).toEqual([{ type: "Attr", name: "group", value: "foo" }]);
+      expect(parseString("{ group = foo; }").stmts).toEqual([
+        { type: "Attr", name: "group", value: "foo", position: expect.any(Object) },
+      ]);
     });
 
     it("as an edge endpoint", () => {
@@ -231,7 +237,7 @@ describe("parseString", () => {
           id: null,
           stmts: [
             { type: "Node", id: "class", attrs: [] },
-            { type: "Node", id: "foo", attrs: [{ type: "Attr", name: "x", value: "y" }] },
+            { type: "Node", id: "foo", attrs: [{ type: "Attr", name: "x", value: "y", position: expect.any(Object) }] },
           ],
         },
       ]);

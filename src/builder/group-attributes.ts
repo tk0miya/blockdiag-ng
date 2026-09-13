@@ -21,6 +21,7 @@ import type { Attr } from "../parser/ast.js";
 import {
   AttributeError,
   assertNever,
+  attachAttrPosition,
   type ClassRegistry,
   parseIntAttr,
   requireValue,
@@ -77,6 +78,15 @@ function parseGroupOrientation(value: string): GroupOrientation {
 }
 
 export function applyGroupAttribute(target: AnyGroup, attr: Attr, classes: ClassRegistry): void {
+  try {
+    applyGroupAttributeValue(target, attr, classes);
+  } catch (error) {
+    attachAttrPosition(error, attr.position);
+    throw error;
+  }
+}
+
+function applyGroupAttributeValue(target: AnyGroup, attr: Attr, classes: ClassRegistry): void {
   const value = unquote(attr.value);
 
   if (attr.name === "class") {

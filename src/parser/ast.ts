@@ -20,11 +20,25 @@
 // Values are kept exactly as tokenized (e.g. a String attribute value
 // keeps its surrounding quotes) - unquoting and attribute
 // interpretation/validation happen later, when building the domain model.
+//
+// `Attr` alone carries its own source `position` (the original has
+// nothing like this at all - a new, this-port-only addition, not a
+// port of anything). Builder-level attribute errors (`AttributeError`/
+// `ColorParseError`, see attributes.ts/color.ts) are the only errors
+// past the parser that can usefully point at a specific place in the
+// source, and every one of them already has the offending `Attr` in
+// scope - so this is the one place position tracking earns its keep,
+// rather than adding it to every AST node "for completeness".
+
+export type { Position } from "./lexer.js";
+
+import type { Position } from "./lexer.js";
 
 export interface Attr {
   readonly type: "Attr";
   readonly name: string;
   readonly value: string | null;
+  readonly position: Position;
 }
 
 export interface NodeStmt {
