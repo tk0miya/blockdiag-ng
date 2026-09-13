@@ -110,3 +110,11 @@ code that makes them; this list is a summary.
   then its icon, then its label, one at a time; this port draws each
   shape's fill and label together, in one call, so the icon (drawn right
   after) ends up on top of the label instead of underneath it.
+
+- **A `textbox`-shaped node with `icon` set but `background` unset no
+  longer crashes when its edge connector points are computed**
+  (`src/render/connectors.ts`). The original only computes the label
+  box's center point inside its `if self.node.background:` branch, then
+  reads that same variable unconditionally on the very next line -
+  a `NameError` whenever `icon` is set without `background`; this port
+  computes it unconditionally instead, since both branches need it.
