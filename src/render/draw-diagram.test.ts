@@ -63,4 +63,40 @@ describe("renderDiagramToSvg", () => {
     const output = svg("diagram { group G { shape = line; A -> B; } }");
     expect(output).not.toContain("filter:url(#filter_blur)");
   });
+
+  it("draws a square node at a fixed size, centered on its cell", () => {
+    const output = svg("diagram { A [shape = square]; }");
+    expect(output).toContain(
+      '<rect x="104" y="36" width="48" height="48" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+  });
+
+  it("draws a square node at the same fixed size regardless of its own width override", () => {
+    // Verified against the original: `width` only ever widens the
+    // *column* other nodes share with it - a square's own size comes
+    // from the diagram-wide default node size, never the node's own
+    // override (see shapes/square.ts).
+    const output = svg("diagram { A [shape = square, width = 300]; }");
+    expect(output).toContain('width="48" height="48"');
+  });
+
+  it("draws nothing at all for a none-shaped node, not even its label", () => {
+    const output = svg('diagram { A [shape = none, label = "hidden"]; A -> B; }');
+    expect(output).not.toContain("hidden");
+    expect(output).not.toContain('<rect x="64"');
+  });
+
+  it("draws only the label for a textbox node, no border or fill", () => {
+    const output = svg('diagram { A [shape = textbox, label = "Hi"]; }');
+    expect(output).not.toContain("<rect");
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws a rounded-rectangle outline for a roundedbox node", () => {
+    const output = svg('diagram { A [shape = roundedbox, label = "Hi"]; }');
+    expect(output).toContain(
+      '<path d="M 72 40 L 184 40 A8,8 0 0 1 192 48 L 192 72 A8,8 0 0 1 184 80 L 72 80 A8,8 0 0 1 64 72 L 64 48 A8,8 0 0 1 72 40" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+    expect(output).toContain(">Hi<");
+  });
 });

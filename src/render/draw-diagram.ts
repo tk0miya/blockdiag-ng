@@ -2,24 +2,28 @@
 // the entry point tying a laid-out `Diagram` to an SVG document. Covers
 // background skeleton (`_draw_background()`'s group loop) plus node
 // rendering (`_draw_elements()`'s node loop, `DiagramDraw.node()`) for
-// the one shape ported so far (`box`). Node shadows (also part of
+// the shapes ported so far. Node shadows (also part of
 // `_draw_background()`), edges, group borders/labels, and the rest of
 // the node shapes are added in later steps.
 import type { AnyGroup, Diagram, DiagramNode, NodeGroup } from "../model/elements.js";
 import type { Font } from "./font-metrics.js";
 import { collectAllNodes, createDiagramMetrics, type DiagramMetrics, marginBox, nodeBox, pageSize } from "./metrics.js";
 import { renderBoxNode } from "./shapes/box.js";
+import { renderNoneNode } from "./shapes/none.js";
+import { renderRoundedboxNode } from "./shapes/roundedbox.js";
+import { renderSquareNode } from "./shapes/square.js";
+import { renderTextboxNode } from "./shapes/textbox.js";
 import { SvgDocument } from "./svg-document.js";
 
 // Ported from `FontMap.fontsize`/`BASE_FONTSIZE`.
 const DEFAULT_FONT_SIZE = 11;
 
 // Ported from `noderenderer.get(shape)`: dispatches a node to its
-// shape's renderer. Only `box` is ported so far (Steps 14-16 add the
-// rest) - unlike the original, which would fail obscurely (`None` is not
-// callable) for a shape it doesn't recognize, this names the shape so
-// the gap is obvious while it's still a port-in-progress limitation
-// rather than a genuinely unknown shape.
+// shape's renderer. Steps 15-16 add the rest - unlike the original,
+// which would fail obscurely (`None` is not callable) for a shape it
+// doesn't recognize, this names the shape so the gap is obvious while
+// it's still a port-in-progress limitation rather than a genuinely
+// unknown shape.
 type NodeRenderer = (
   doc: SvgDocument,
   metrics: DiagramMetrics,
@@ -30,6 +34,10 @@ type NodeRenderer = (
 
 const NODE_RENDERERS: Record<string, NodeRenderer> = {
   box: renderBoxNode,
+  roundedbox: renderRoundedboxNode,
+  square: renderSquareNode,
+  none: renderNoneNode,
+  textbox: renderTextboxNode,
 };
 
 function drawNodes(
