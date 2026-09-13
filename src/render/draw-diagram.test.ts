@@ -354,4 +354,38 @@ describe("renderDiagramToSvg", () => {
       );
     });
   });
+
+  describe("number badge", () => {
+    it("draws a circled number over a node's own top-left corner", () => {
+      const output = svg('diagram { A [label = "Hi", numbered = 1]; }');
+      expect(output).toContain(
+        '<ellipse cx="64" cy="40" rx="12" ry="12" fill="rgb(255,192,203)" stroke="rgb(0,0,0)"/>',
+      );
+      expect(output).toContain(">1<");
+    });
+
+    it("positions the badge from the node's raw grid box, independent of its shape", () => {
+      // Verified against the original: a circle-shaped node's badge
+      // still sits at its plain grid-box corner (64, 40), not
+      // recentered around the circle's own larger, differently
+      // positioned outline.
+      const output = svg('diagram { A [shape = circle, label = "Hi", numbered = 12]; }');
+      expect(output).toContain(
+        '<ellipse cx="64" cy="40" rx="12" ry="12" fill="rgb(255,192,203)" stroke="rgb(0,0,0)"/>',
+      );
+      expect(output).toContain(">12<");
+    });
+
+    it("draws no badge for a node without a numbered attribute", () => {
+      const output = svg('diagram { A [label = "Hi"]; }');
+      expect(output).not.toContain("rgb(255,192,203)");
+    });
+
+    it("draws the badge even when shadow_style = none (it never has a shadow of its own)", () => {
+      const output = svg('diagram { shadow_style = none; A [label = "Hi", numbered = 1]; }');
+      expect(output).toContain(
+        '<ellipse cx="64" cy="40" rx="12" ry="12" fill="rgb(255,192,203)" stroke="rgb(0,0,0)"/>',
+      );
+    });
+  });
 });
