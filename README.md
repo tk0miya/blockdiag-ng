@@ -2,6 +2,22 @@
 
 blockdiag-ng is a TypeScript successor to [blockdiag](https://github.com/blockdiag/blockdiag), a text-to-diagram generator for block diagrams. It aims to stay compatible with the original DSL and rendered output while running natively on Node.js.
 
+## Usage
+
+blockdiag-ng isn't published to npm yet (see the implementation plan's
+later steps), but its CLI can already be built and run from a checkout:
+
+```sh
+npm run build
+node dist/cli.js diagram.diag          # writes diagram.svg next to it
+node dist/cli.js diagram.diag -o out.svg
+cat diagram.diag | node dist/cli.js -  # reads from stdin
+```
+
+Only SVG output exists so far - PNG (`-T`), font selection (`-f`/
+`--fontmap`), and every other option the original CLI supports are
+later steps.
+
 ## License
 
 Apache License 2.0. See [LICENSE](./LICENSE).
