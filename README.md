@@ -4,18 +4,21 @@ blockdiag-ng is a TypeScript successor to [blockdiag](https://github.com/blockdi
 
 ## Usage
 
-blockdiag-ng isn't published to npm yet (see the implementation plan's
-later steps), but its CLI can already be built and run from a checkout:
+```sh
+npx blockdiag diagram.diag          # writes diagram.svg next to it
+npx blockdiag diagram.diag -T png   # writes diagram.png instead
+npx blockdiag diagram.diag -o out.svg
+cat diagram.diag | npx blockdiag -  # reads from stdin
+npx blockdiag diagram.diag --lint   # validates only, writes nothing
+npx blockdiag diagram.diag -T ast   # writes the parsed AST as JSON
+npx blockdiag diagram.json          # an AST JSON file works as input too
+```
+
+Or, from a checkout, in place of `npx blockdiag`:
 
 ```sh
 npm run build
-node dist/cli.js diagram.diag          # writes diagram.svg next to it
-node dist/cli.js diagram.diag -T png   # writes diagram.png instead
-node dist/cli.js diagram.diag -o out.svg
-cat diagram.diag | node dist/cli.js -  # reads from stdin
-node dist/cli.js diagram.diag --lint   # validates only, writes nothing
-node dist/cli.js diagram.diag -T ast   # writes the parsed AST as JSON
-node dist/cli.js diagram.json          # an AST JSON file works as input too
+node dist/cli.js diagram.diag
 ```
 
 Only SVG and PNG output exist so far - font selection (`-f`/
