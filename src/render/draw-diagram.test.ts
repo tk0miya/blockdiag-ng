@@ -539,4 +539,57 @@ describe("renderDiagramToSvg", () => {
       expect(output).not.toContain("<image");
     });
   });
+
+  // Expected values here are derived from the metrics/stacked formulas
+  // directly (see draw-diagram.ts's renderNode()), not captured from a
+  // live Python run like the rest of this file - same as the "icon" and
+  // "background" cases above.
+  describe("stacked", () => {
+    it("draws two unlabeled duplicate copies behind the real node, shifted down-right by decreasing amounts", () => {
+      const output = svg('diagram { A [label = "Hi", stacked]; }');
+      // r = floor(cellSize/2) = 4; the two duplicates shift by r*2=8 and
+      // r*1=4 respectively, the real node not at all.
+      const first = output.indexOf(
+        '<rect x="72" y="48" width="128" height="40" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+      );
+      const second = output.indexOf(
+        '<rect x="68" y="44" width="128" height="40" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+      );
+      const third = output.indexOf(
+        '<rect x="64" y="40" width="128" height="40" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+      );
+      expect(first).toBeGreaterThanOrEqual(0);
+      expect(second).toBeGreaterThan(first);
+      expect(third).toBeGreaterThan(second);
+      // Only the real (unshifted, last-drawn) node keeps its label - the
+      // duplicates' own label is cleared to "", which draws nothing.
+      expect(output.indexOf(">Hi<")).toBeGreaterThan(third);
+    });
+
+    it("draws only one copy for a node without stacked", () => {
+      const output = svg('diagram { A [label = "Hi"]; }');
+      // Matches only the normal-pass (white-filled) rectangle, not the
+      // shadow pass's own (black-filled) one for the same node.
+      expect(output.match(/<rect x="\d+" y="\d+" width="128" height="40" fill="rgb\(255,255,255\)"/g)).toHaveLength(1);
+    });
+
+    it("casts a shadow for each of a stacked node's duplicate copies too, not just the real one", () => {
+      const output = svg('diagram { A [label = "Hi", stacked]; }');
+      // Every shadow here uses the same shifted-shadow-offset (3, 6) on
+      // top of whichever of the 3 (2 duplicate + 1 real) boxes it
+      // belongs to.
+      expect(output).toContain('<rect x="75" y="54" width="128" height="40" fill="rgb(0,0,0)"');
+      expect(output).toContain('<rect x="71" y="50" width="128" height="40" fill="rgb(0,0,0)"');
+      expect(output).toContain('<rect x="67" y="46" width="128" height="40" fill="rgb(0,0,0)"');
+    });
+
+    it("duplicates a stacked node's own icon and number badge onto every layer too, matching the original", () => {
+      // Not narrowed down to just the real node - the original's own
+      // `node.duplicate()` only clears `label`/`background`, leaving
+      // `icon`/`numbered` (and everything else) as-is.
+      const output = svg(`diagram { A [label = "Hi", stacked, numbered = 1, icon = "${ICON_PATH}"]; }`);
+      expect(output.match(/<image /g)).toHaveLength(3);
+      expect(output.match(/rgb\(255,192,203\)/g)).toHaveLength(3);
+    });
+  });
 });
