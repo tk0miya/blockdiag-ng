@@ -46,6 +46,14 @@ describe("SvgDocument", () => {
       );
     });
 
+    it("applies the transp-blur filter, used for a node's own shadow", () => {
+      const doc = new SvgDocument();
+      doc.ellipse({ x1: 0, y1: 0, x2: 100, y2: 40 }, { fill: [0, 0, 0], filter: "transp-blur" });
+      expect(doc.toString({ width: 100, height: 40 })).toContain(
+        'style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1"',
+      );
+    });
+
     it("adds a stroke-dasharray for a dotted style", () => {
       const doc = new SvgDocument();
       doc.ellipse({ x1: 0, y1: 0, x2: 100, y2: 40 }, { outline: [0, 0, 0], style: { type: "dotted" } });

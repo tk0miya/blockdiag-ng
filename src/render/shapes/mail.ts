@@ -1,24 +1,25 @@
 // Ported from `noderenderer/mail.py`: a box with an envelope's "flap"
-// line drawn across its top, and a label inset below the flap.
-// Shadow/background-image branches deferred to Step 17, same as
-// box.ts.
+// line drawn across its top, and a label inset below the flap. Plus its
+// shadow branch - the flap line is skipped for shadow, same as the
+// fold crease in note.ts. A background image is deferred to Step 17c,
+// same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
-import type { Font } from "../font-metrics.js";
 import type { Box } from "../geometry.js";
 import { boxTop, boxTopLeft, boxTopRight } from "../geometry.js";
 import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
+import type { RenderMode } from "../render-mode.js";
+import { SHADOW_COLOR, shiftShadowBox } from "../shadow.js";
 import type { SvgDocument } from "../svg-document.js";
 
-export function renderMailNode(
-  doc: SvgDocument,
-  metrics: DiagramMetrics,
-  font: Font,
-  fontSize: number,
-  node: DiagramNode,
-): void {
+export function renderMailNode(doc: SvgDocument, metrics: DiagramMetrics, node: DiagramNode, mode: RenderMode): void {
   const box = nodeBox(metrics, node);
   const r = metrics.cellSize * 2;
+
+  if (mode.kind === "shadow") {
+    doc.rectangle(shiftShadowBox(box), { fill: SHADOW_COLOR, outline: SHADOW_COLOR, filter: mode.filter });
+    return;
+  }
 
   doc.rectangle(box, { fill: node.color, outline: node.linecolor, style: node.style });
 
@@ -30,6 +31,6 @@ export function renderMailNode(
 
   if (node.label !== null) {
     const textBox: Box = { x1: box.x1, y1: box.y1 + r, x2: box.x2, y2: box.y2 };
-    doc.textarea(textBox, node.label, font, fontSize, { fill: node.textcolor, halign: "center" });
+    doc.textarea(textBox, node.label, mode.font, mode.fontSize, { fill: node.textcolor, halign: "center" });
   }
 }

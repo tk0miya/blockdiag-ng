@@ -1,15 +1,16 @@
 // Ported from `noderenderer/cloud.py`'s `render_vector_shape` - the
 // SVG-specific outline (a single "cloud" path built from 8 elliptical
-// arcs). Like `roundedbox`, the original's alternate raster
-// `render_shape`/`render_shape_background` (composited ellipses and
-// rectangles) is out of scope for an SVG-only port. Shadow/
-// background-image branches deferred to Step 17, same as box.ts.
+// arcs), plus its shadow branch. Like `roundedbox`, the original's
+// alternate raster `render_shape`/`render_shape_background`
+// (composited ellipses and rectangles) is out of scope for an SVG-only
+// port. A background image is deferred to Step 17c, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
-import type { Font } from "../font-metrics.js";
 import type { Box, Point } from "../geometry.js";
 import { boxTopLeft } from "../geometry.js";
 import type { DiagramMetrics } from "../metrics.js";
 import { effectiveSize, nodeBox } from "../metrics.js";
+import type { RenderMode } from "../render-mode.js";
+import { SHADOW_COLOR, shiftShadowPoint } from "../shadow.js";
 import type { SvgDocument } from "../svg-document.js";
 
 // Ported from the `pathdata` calls in `render_vector_shape`: 8
@@ -30,17 +31,17 @@ function cloudPath(topLeft: Point, rx: number, ry: number): string {
   ].join(" ");
 }
 
-export function renderCloudNode(
-  doc: SvgDocument,
-  metrics: DiagramMetrics,
-  font: Font,
-  fontSize: number,
-  node: DiagramNode,
-): void {
+export function renderCloudNode(doc: SvgDocument, metrics: DiagramMetrics, node: DiagramNode, mode: RenderMode): void {
   const box = nodeBox(metrics, node);
   const rx = Math.floor(effectiveSize(node.width, metrics.nodeWidth) / 12);
   const ry = Math.floor(effectiveSize(node.height, metrics.nodeHeight) / 5);
   const topLeft = boxTopLeft(box);
+
+  if (mode.kind === "shadow") {
+    const path = cloudPath(shiftShadowPoint(topLeft), rx, ry);
+    doc.path(path, { fill: SHADOW_COLOR, outline: SHADOW_COLOR, filter: mode.filter });
+    return;
+  }
 
   doc.path(cloudPath(topLeft, rx, ry), { fill: node.color, outline: node.linecolor, style: node.style });
 
@@ -51,6 +52,6 @@ export function renderCloudNode(
       x2: topLeft.x + rx * 11,
       y2: topLeft.y + ry * 4,
     };
-    doc.textarea(textBox, node.label, font, fontSize, { fill: node.textcolor, halign: "center" });
+    doc.textarea(textBox, node.label, mode.font, mode.fontSize, { fill: node.textcolor, halign: "center" });
   }
 }

@@ -7,8 +7,9 @@
 // text-folder.ts's empty-paragraph handling) - ported as its own
 // truthiness check to match the original's `if node.label:` exactly,
 // since here it also affects the figure's own geometry, not just
-// whether text renders. Shadow branch deferred to Step 17, same as
-// box.ts (this shape has no background-image branch to begin with).
+// whether text renders. Plus its shadow branch - body and head are
+// each shifted independently (this shape has no background-image
+// branch to begin with).
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
 import { measureTextHeight, measureTextWidth } from "../font-metrics.js";
@@ -16,6 +17,8 @@ import type { Box, Point } from "../geometry.js";
 import { boxCenter, boxHeight, boxLeft, boxRight, boxWidth } from "../geometry.js";
 import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
+import type { RenderMode } from "../render-mode.js";
+import { SHADOW_COLOR, shiftShadowBox, shiftShadowPoints } from "../shadow.js";
 import type { SvgDocument } from "../svg-document.js";
 import { foldText } from "../text-folder.js";
 
@@ -76,24 +79,31 @@ function bodyPart(bodyC: Point, radius: number): Point[] {
   ];
 }
 
-export function renderActorNode(
-  doc: SvgDocument,
-  metrics: DiagramMetrics,
-  font: Font,
-  fontSize: number,
-  node: DiagramNode,
-): void {
+export function renderActorNode(doc: SvgDocument, metrics: DiagramMetrics, node: DiagramNode, mode: RenderMode): void {
   const box = nodeBox(metrics, node);
   const hasLabel = node.label !== null && node.label !== "";
-  const textHeight = hasLabel ? labelHeight(font, node.label as string, fontSize) : 0;
+  const textHeight = hasLabel ? labelHeight(mode.font, node.label as string, mode.fontSize) : 0;
   const shortside = hasLabel
     ? Math.min(boxWidth(box), boxHeight(box) - textHeight)
     : Math.min(boxWidth(box), boxHeight(box));
   const radius = Math.floor(shortside / 8);
   const center = boxCenter(box);
 
-  doc.polygon(bodyPart(center, radius), { fill: node.color, outline: node.linecolor, style: node.style });
-  doc.ellipse(headPart(center, radius), { fill: node.color, outline: node.linecolor, style: node.style });
+  const body = bodyPart(center, radius);
+  const head = headPart(center, radius);
+
+  if (mode.kind === "shadow") {
+    // The body's shadow has no outline at all (the original omits that
+    // kwarg entirely); the head's shadow keeps the node's own
+    // `linecolor` as its outline instead of the shadow color - both
+    // ported exactly as the original's two shadow branches differ.
+    doc.polygon(shiftShadowPoints(body), { fill: SHADOW_COLOR, filter: mode.filter });
+    doc.ellipse(shiftShadowBox(head), { fill: SHADOW_COLOR, outline: node.linecolor, filter: mode.filter });
+    return;
+  }
+
+  doc.polygon(body, { fill: node.color, outline: node.linecolor, style: node.style });
+  doc.ellipse(head, { fill: node.color, outline: node.linecolor, style: node.style });
 
   if (node.label !== null) {
     const textBox: Box = {
@@ -102,6 +112,6 @@ export function renderActorNode(
       x2: boxRight(box).x,
       y2: center.y + radius * 4 + textHeight,
     };
-    doc.textarea(textBox, node.label, font, fontSize, { fill: node.textcolor, halign: "center" });
+    doc.textarea(textBox, node.label, mode.font, mode.fontSize, { fill: node.textcolor, halign: "center" });
   }
 }
