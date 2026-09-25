@@ -26,7 +26,7 @@
     "@types/fontkit": "^2.0.9",
     "@types/node": "^24.13.4",
     "typescript": "^7.0.2",
-    "vitest": "^5.0.0"
+    "vitest": "^5.0.1"
   },
   "dependencies": {
     "color-name": "^2.1.1",
