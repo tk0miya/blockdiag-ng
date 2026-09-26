@@ -225,4 +225,61 @@ describe("renderDiagramToSvg", () => {
         'fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
     );
   });
+
+  it("draws a database cylinder with a highlighted cap", () => {
+    const output = svg('diagram { A [shape = flowchart.database, label = "Hi"]; }');
+    expect(output).toContain(
+      '<path d="M 64 48 A64,8 0 0 1 192 48 L 192 72 A64,8 0 0 1 64 72 L 64 48" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+    expect(output).toContain('<path d="M 192 48 A64,8 0 0 1 64 48" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws a database cylinder at the same fixed radius regardless of its own width override", () => {
+    // Verified against the original: the arc radius comes from the
+    // diagram-wide default node width, never the node's own override -
+    // same pattern as `square` (Step 14).
+    const output = svg("diagram { A [shape = flowchart.database, width = 300]; }");
+    expect(output).toContain("A64,8 0 0 1");
+  });
+
+  it("draws an input parallelogram", () => {
+    const output = svg('diagram { A [shape = flowchart.input, label = "Hi"]; }');
+    expect(output).toContain(
+      '<polygon points="88,40 192,40 168,80 64,80 88,40" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws a loopin shape notched at the top-left", () => {
+    const output = svg('diagram { A [shape = flowchart.loopin, label = "Hi"]; }');
+    expect(output).toContain(
+      '<polygon points="96,40 160,40 192,50 192,80 64,80 64,50 96,40" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws a loopout shape notched at the bottom-right", () => {
+    const output = svg('diagram { A [shape = flowchart.loopout, label = "Hi"]; }');
+    expect(output).toContain(
+      '<polygon points="64,40 192,40 192,70 160,80 96,80 64,70 64,40" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws a terminator pill shape", () => {
+    const output = svg('diagram { A [shape = flowchart.terminator, label = "Hi"]; }');
+    expect(output).toContain(
+      '<path d="M 80 40 L 176 40 A16,20 0 0 1 176 80 L 80 80 A16,20 0 0 1 80 40" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws a terminator's end caps at the same fixed radius regardless of its own height override", () => {
+    // Verified against the original: the end caps' radius comes from
+    // the diagram-wide default node height, never the node's own
+    // override - same pattern as `database` above.
+    const output = svg("diagram { A [shape = flowchart.terminator, height = 100]; }");
+    expect(output).toContain("A16,20 0 0 1");
+  });
 });
