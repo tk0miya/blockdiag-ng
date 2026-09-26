@@ -48,3 +48,7 @@ code that makes them; this list is a summary.
   no longer crashes** (`src/builder/tree-builder.ts`). For example,
   `group G { A [group = "G"]; }` recognizes `"G"` as the same group `A`
   is already in; the original crashes on this input instead.
+
+- **A bare `label;` attribute (no value) no longer crashes when
+  rendered** (`src/render/shapes/box.ts`). It renders as no label at
+  all; the original crashes trying to render one instead.
