@@ -10,7 +10,7 @@
 // They're required fields (not optional) so a shape must say explicitly
 // whether it customizes them or falls back to the plain box default
 // (`null`) - added once connectors.ts/icon.ts exist, in later steps.
-// Only `box` (this step's one shape) is registered so far.
+// See shapes/index.ts for the current roster of registered shapes.
 //
 // Unlike the original, which resolves shapes at runtime via
 // `pkg_resources.iter_entry_points('blockdiag_noderenderer')` (letting a

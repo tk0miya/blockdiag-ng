@@ -2,7 +2,7 @@
 // the entry point tying a laid-out `Diagram` to an SVG document. Covers
 // background skeleton (`_draw_background()`'s group loop) plus node
 // rendering (`_draw_elements()`'s node loop, `DiagramDraw.node()`) for
-// the one shape ported so far (`box`). Node shadows (also part of
+// the shapes ported so far. Node shadows (also part of
 // `_draw_background()`), edges, group borders/labels, and the rest of
 // the node shapes are added in later steps. Dispatching a node to its
 // shape's renderer (ported from `noderenderer.get(shape)`) now lives in
