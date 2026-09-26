@@ -82,14 +82,24 @@ export class SvgDocument {
   }
 
   // Ported from `ellipse()`.
-  ellipse(box: Box, options: { readonly fill?: Color; readonly outline?: Color }): void {
+  ellipse(
+    box: Box,
+    options: {
+      readonly fill?: Color;
+      readonly outline?: Color;
+      readonly style?: LineStyle | null;
+      readonly thick?: number | null;
+    },
+  ): void {
     const rx = boxWidth(box) / 2;
     const ry = boxHeight(box) / 2;
     const cx = box.x1 + rx;
     const cy = box.y1 + ry;
+    const dasharray = svgDasharray(options.style ?? null, options.thick ?? null);
     this.elements.push(
       `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${cssColor(options.fill ?? "none")}"` +
         (options.outline !== undefined ? ` stroke="${cssColor(options.outline)}"` : "") +
+        (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
         `/>`,
     );
   }
@@ -97,11 +107,21 @@ export class SvgDocument {
   // Ported from `polygon()`, including its own truncation of each point
   // to a whole number (`'%d,%d' % pt`) - unlike every other primitive
   // here, which keeps a coordinate's fractional part.
-  polygon(points: readonly Point[], options: { readonly fill?: Color; readonly outline?: Color }): void {
+  polygon(
+    points: readonly Point[],
+    options: {
+      readonly fill?: Color;
+      readonly outline?: Color;
+      readonly style?: LineStyle | null;
+      readonly thick?: number | null;
+    },
+  ): void {
     const pointList = points.map((p) => `${Math.trunc(p.x)},${Math.trunc(p.y)}`).join(" ");
+    const dasharray = svgDasharray(options.style ?? null, options.thick ?? null);
     this.elements.push(
       `<polygon points="${pointList}" fill="${cssColor(options.fill ?? "none")}"` +
         (options.outline !== undefined ? ` stroke="${cssColor(options.outline)}"` : "") +
+        (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
         `/>`,
     );
   }
