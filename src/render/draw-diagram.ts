@@ -1,12 +1,38 @@
 // Ported from `DiagramDraw` (vendor/blockdiag/src/blockdiag/drawer.py):
-// the entry point tying a laid-out `Diagram` to an SVG document. Only the
-// background skeleton so far - a box-shaped group's own background
-// rectangle (`_draw_background()`'s group loop). Node/edge shapes and
-// group borders/labels (`_draw_elements()`) are added in later steps,
-// once there's a shape to draw.
+// the entry point tying a laid-out `Diagram` to an SVG document. Covers
+// background skeleton (`_draw_background()`'s group loop) plus node
+// rendering (`_draw_elements()`'s node loop, `DiagramDraw.node()`) for
+// the one shape ported so far (`box`). Node shadows (also part of
+// `_draw_background()`), edges, group borders/labels, and the rest of
+// the node shapes are added in later steps. Dispatching a node to its
+// shape's renderer (ported from `noderenderer.get(shape)`) now lives in
+// shape-registry.ts/shapes/index.ts rather than here.
 import type { AnyGroup, Diagram, NodeGroup } from "../model/elements.js";
-import { createDiagramMetrics, type DiagramMetrics, marginBox, nodeBox, pageSize } from "./metrics.js";
+import type { Font } from "./font-metrics.js";
+import { collectAllNodes, createDiagramMetrics, type DiagramMetrics, marginBox, nodeBox, pageSize } from "./metrics.js";
+import { rendererFor } from "./shape-registry.js";
+import { registerBuiltinShapes } from "./shapes/index.js";
 import { SvgDocument } from "./svg-document.js";
+
+// Ported from `FontMap.fontsize`/`BASE_FONTSIZE`.
+const DEFAULT_FONT_SIZE = 11;
+
+// Runs once at import time, so every shape is registered before
+// renderDiagramToSvg() (this module's only entry point) ever calls
+// rendererFor().
+registerBuiltinShapes();
+
+function drawNodes(
+  doc: SvgDocument,
+  metrics: DiagramMetrics,
+  diagram: Diagram,
+  font: Font,
+  defaultFontSize: number,
+): void {
+  for (const node of collectAllNodes(diagram)) {
+    rendererFor(node.shape)(doc, metrics, font, node.fontsize ?? defaultFontSize, node);
+  }
+}
 
 // Ported from `NodeGroup.traverse_groups(preorder=True)`, as used by
 // `DiagramDraw.groups`: every group nested anywhere in `group`, each one
@@ -33,11 +59,15 @@ function drawGroupBackgrounds(doc: SvgDocument, metrics: DiagramMetrics, diagram
   }
 }
 
-export function renderDiagramToSvg(diagram: Diagram): string {
+export function renderDiagramToSvg(
+  diagram: Diagram,
+  options: { readonly font: Font; readonly fontSize?: number },
+): string {
   const metrics = createDiagramMetrics(diagram);
   const doc = new SvgDocument();
 
   drawGroupBackgrounds(doc, metrics, diagram);
+  drawNodes(doc, metrics, diagram, options.font, options.fontSize ?? DEFAULT_FONT_SIZE);
 
   return doc.toString(pageSize(metrics, diagram.colwidth, diagram.colheight));
 }
