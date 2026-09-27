@@ -11,6 +11,11 @@ import { diamondShape } from "./diamond.js";
 import { dotsShape } from "./dots.js";
 import { ellipseShape } from "./ellipse.js";
 import { endpointShape } from "./endpoint.js";
+import { flowchartDatabaseShape } from "./flowchart-database.js";
+import { flowchartInputShape } from "./flowchart-input.js";
+import { flowchartLoopinShape } from "./flowchart-loopin.js";
+import { flowchartLoopoutShape } from "./flowchart-loopout.js";
+import { flowchartTerminatorShape } from "./flowchart-terminator.js";
 import { mailShape } from "./mail.js";
 import { minidiamondShape } from "./minidiamond.js";
 import { noneShape } from "./none.js";
@@ -39,4 +44,9 @@ export function registerBuiltinShapes(): void {
   registerShape("actor", actorShape);
   registerShape("beginpoint", beginpointShape);
   registerShape("endpoint", endpointShape);
+  registerShape("flowchart.database", flowchartDatabaseShape);
+  registerShape("flowchart.input", flowchartInputShape);
+  registerShape("flowchart.loopin", flowchartLoopinShape);
+  registerShape("flowchart.loopout", flowchartLoopoutShape);
+  registerShape("flowchart.terminator", flowchartTerminatorShape);
 }
