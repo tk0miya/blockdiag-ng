@@ -69,6 +69,15 @@ export function boxBottomRight(box: Box): Point {
   return { x: box.x2, y: box.y2 };
 }
 
+// Ported from `Box.shift()`/`XY.shift()`.
+export function shiftBox(box: Box, dx: number, dy: number): Box {
+  return { x1: box.x1 + dx, y1: box.y1 + dy, x2: box.x2 + dx, y2: box.y2 + dy };
+}
+
+export function shiftPoint(point: Point, dx: number, dy: number): Point {
+  return { x: point.x + dx, y: point.y + dy };
+}
+
 // Ported from `Box.get_padding_for()`: the offset from `box`'s own
 // top-left at which a `size`-shaped thing sits when aligned within it -
 // flush against an edge (plus `padding`) for `"left"`/`"right"`/

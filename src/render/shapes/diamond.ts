@@ -1,23 +1,26 @@
 // Ported from `noderenderer/diamond.py`: a diamond whose four points
 // extend `cellsize` beyond the midpoint of each of the node's own box
 // edges, with its label inset to the (smaller) box those points'
-// midpoints describe. Shadow/background-image branches deferred to
-// Step 17, same as box.ts.
+// midpoints describe. Plus its shadow branch. A background image is
+// deferred to Step 17c, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
 import type { Box, Point } from "../geometry.js";
 import { boxBottom, boxLeft, boxRight, boxTop } from "../geometry.js";
 import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
+import type { RenderMode } from "../render-mode.js";
+import { SHADOW_COLOR, shiftShadowPoints } from "../shadow.js";
 import type { NodeShape } from "../shape-registry.js";
 import type { SvgDocument } from "../svg-document.js";
 
 export function renderDiamondNode(
   doc: SvgDocument,
   metrics: DiagramMetrics,
+  node: DiagramNode,
   font: Font,
   fontSize: number,
-  node: DiagramNode,
+  mode: RenderMode,
 ): void {
   const box = nodeBox(metrics, node);
   const r = metrics.cellSize;
@@ -30,6 +33,11 @@ export function renderDiamondNode(
   const bottom: Point = { x: boxBottomPoint.x, y: boxBottomPoint.y + r };
   const left: Point = { x: boxLeftPoint.x - r, y: boxLeftPoint.y };
   const connectors = [top, right, bottom, left, top];
+
+  if (mode.kind === "shadow") {
+    doc.polygon(shiftShadowPoints(connectors), { fill: SHADOW_COLOR, outline: SHADOW_COLOR, filter: mode.filter });
+    return;
+  }
 
   doc.polygon(connectors, { fill: node.color, outline: node.linecolor, style: node.style });
 

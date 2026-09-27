@@ -1,15 +1,17 @@
 // Ported from `DiagramDraw` (vendor/blockdiag/src/blockdiag/drawer.py):
 // the entry point tying a laid-out `Diagram` to an SVG document. Covers
-// background skeleton (`_draw_background()`'s group loop) plus node
-// rendering (`_draw_elements()`'s node loop, `DiagramDraw.node()`) for
-// the shapes ported so far. Node shadows (also part of
-// `_draw_background()`), edges, group borders/labels, and the rest of
-// the node shapes are added in later steps. Dispatching a node to its
-// shape's renderer (ported from `noderenderer.get(shape)`) now lives in
-// shape-registry.ts/shapes/index.ts rather than here.
+// background skeleton (`_draw_background()`'s group backgrounds and node
+// shadows) plus node rendering (`_draw_elements()`'s node loop,
+// `DiagramDraw.node()`) for the shapes ported so far. Edges, group
+// borders/labels, icons, and number badges are added in later steps.
+// Dispatching a node to its shape's renderer (ported from
+// `noderenderer.get(shape)`) lives in shape-registry.ts/shapes/index.ts
+// rather than here.
 import type { AnyGroup, Diagram, NodeGroup } from "../model/elements.js";
 import type { Font } from "./font-metrics.js";
 import { collectAllNodes, createDiagramMetrics, type DiagramMetrics, marginBox, nodeBox, pageSize } from "./metrics.js";
+import type { RenderMode } from "./render-mode.js";
+import { shadowFilter } from "./shadow.js";
 import { rendererFor } from "./shape-registry.js";
 import { registerBuiltinShapes } from "./shapes/index.js";
 import { SvgDocument } from "./svg-document.js";
@@ -22,6 +24,28 @@ const DEFAULT_FONT_SIZE = 11;
 // rendererFor().
 registerBuiltinShapes();
 
+// Ported from `DiagramDraw._draw_background()`'s node loop: every
+// node's shadow, drawn before (so ends up underneath) anything from
+// `drawNodes()` below - a node whose own color is the literal `"none"`
+// casts none, and `shadow_style = "none"` turns shadows off for the
+// whole diagram.
+function drawNodeShadows(
+  doc: SvgDocument,
+  metrics: DiagramMetrics,
+  diagram: Diagram,
+  font: Font,
+  defaultFontSize: number,
+): void {
+  if (diagram.shadowStyle === "none") return;
+  const filter = shadowFilter(diagram.shadowStyle);
+
+  for (const node of collectAllNodes(diagram)) {
+    if (node.color === "none") continue;
+    const mode: RenderMode = { kind: "shadow", filter };
+    rendererFor(node.shape)(doc, metrics, node, font, node.fontsize ?? defaultFontSize, mode);
+  }
+}
+
 function drawNodes(
   doc: SvgDocument,
   metrics: DiagramMetrics,
@@ -30,7 +54,8 @@ function drawNodes(
   defaultFontSize: number,
 ): void {
   for (const node of collectAllNodes(diagram)) {
-    rendererFor(node.shape)(doc, metrics, font, node.fontsize ?? defaultFontSize, node);
+    const mode: RenderMode = { kind: "normal" };
+    rendererFor(node.shape)(doc, metrics, node, font, node.fontsize ?? defaultFontSize, mode);
   }
 }
 
@@ -66,8 +91,10 @@ export function renderDiagramToSvg(
   const metrics = createDiagramMetrics(diagram);
   const doc = new SvgDocument();
 
+  const fontSize = options.fontSize ?? DEFAULT_FONT_SIZE;
   drawGroupBackgrounds(doc, metrics, diagram);
-  drawNodes(doc, metrics, diagram, options.font, options.fontSize ?? DEFAULT_FONT_SIZE);
+  drawNodeShadows(doc, metrics, diagram, options.font, fontSize);
+  drawNodes(doc, metrics, diagram, options.font, fontSize);
 
   return doc.toString(pageSize(metrics, diagram.colwidth, diagram.colheight));
 }

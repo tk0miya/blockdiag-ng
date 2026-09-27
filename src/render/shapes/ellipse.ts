@@ -2,24 +2,34 @@
 // whole cell (unlike `circle`, which insets its own bounding box - this
 // draws straight into the cell box itself). Its label wraps within a
 // narrower inset box instead, so it doesn't run into the ellipse's own
-// curve. Shadow/background-image branches deferred to Step 17, same as
-// box.ts.
+// curve. Plus its shadow branch (the full cell box shifted, same as the
+// ellipse itself - not the label's narrower inset box). A background
+// image is deferred to Step 17c, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
 import type { Box } from "../geometry.js";
 import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
+import type { RenderMode } from "../render-mode.js";
+import { SHADOW_COLOR, shiftShadowBox } from "../shadow.js";
 import type { NodeShape } from "../shape-registry.js";
 import type { SvgDocument } from "../svg-document.js";
 
 export function renderEllipseNode(
   doc: SvgDocument,
   metrics: DiagramMetrics,
+  node: DiagramNode,
   font: Font,
   fontSize: number,
-  node: DiagramNode,
+  mode: RenderMode,
 ): void {
   const box = nodeBox(metrics, node);
+
+  if (mode.kind === "shadow") {
+    doc.ellipse(shiftShadowBox(box), { fill: SHADOW_COLOR, outline: SHADOW_COLOR, filter: mode.filter });
+    return;
+  }
+
   doc.ellipse(box, { fill: node.color, outline: node.linecolor, style: node.style });
 
   if (node.label !== null) {
