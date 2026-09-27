@@ -149,4 +149,80 @@ describe("renderDiagramToSvg", () => {
     expect(output).toContain('cx="85.33333333333334"');
     expect(output).toContain('cx="170.66666666666666"');
   });
+
+  it("draws a cloud outline path", () => {
+    const output = svg('diagram { A [shape = cloud, label = "Hi"]; }');
+    expect(output).toContain(
+      '<path d="M 84 56 A20,8 0 0 1 104 48 A20,6 0 0 1 154 48 A20,8 0 0 1 174 56 A20,8 0 0 1 174 72 ' +
+        'A20,20 0 0 1 144 72 A20,20 0 0 1 114 72 A20,20 0 0 1 84 72 A20,8 0 0 1 84 56" ' +
+        'fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws a note with a folded top-right corner", () => {
+    const output = svg('diagram { A [shape = note, label = "Hi"]; }');
+    expect(output).toContain(
+      '<polygon points="64,40 176,40 192,56 192,80 64,80 64,40" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+    expect(output).toContain('<path d="M 176 40 L 176 56" fill="none" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain('<path d="M 176 56 L 192 56" fill="none" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws a mail with a flap across the top", () => {
+    const output = svg('diagram { A [shape = mail, label = "Hi"]; }');
+    expect(output).toContain(
+      '<rect x="64" y="40" width="128" height="40" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+    expect(output).toContain('<path d="M 64 40 L 128 56" fill="none" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain('<path d="M 128 56 L 192 40" fill="none" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws an actor as a body polygon plus a head ellipse", () => {
+    const output = svg('diagram { A [shape = actor, label = "Hi"]; }');
+    expect(output).toContain(
+      '<polygon points="130,54 130,57 140,57 140,60 130,60 130,63 138,72 134,72 128,66 122,72 118,72 ' +
+        '126,63 126,60 116,60 116,57 126,57 126,54" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+    expect(output).toContain('<ellipse cx="128" cy="51" rx="4" ry="4" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain(">Hi<");
+  });
+
+  it("draws a beginpoint as a solid dot when the node's color is still the default", () => {
+    const output = svg("diagram { A [shape = beginpoint]; }");
+    expect(output).toContain('<ellipse cx="128" cy="60" rx="8" ry="8" fill="rgb(0,0,0)" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain(">A<");
+  });
+
+  it("draws a beginpoint with its own color when one is explicitly set", () => {
+    const output = svg("diagram { A [shape = beginpoint, color = red]; }");
+    expect(output).toContain('<ellipse cx="128" cy="60" rx="8" ry="8" fill="rgb(255,0,0)" stroke="rgb(0,0,0)"/>');
+  });
+
+  it("draws an endpoint as a white outer ring with a solid inner dot", () => {
+    const output = svg("diagram { A [shape = endpoint]; }");
+    expect(output).toContain('<ellipse cx="128" cy="60" rx="8" ry="8" fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain('<ellipse cx="128" cy="60" rx="4" ry="4" fill="rgb(0,0,0)" stroke="rgb(0,0,0)"/>');
+    expect(output).toContain(">A<");
+  });
+
+  it("draws an endpoint's inner dot with its own color when one is explicitly set", () => {
+    const output = svg("diagram { A [shape = endpoint, color = red]; }");
+    expect(output).toContain('<ellipse cx="128" cy="60" rx="4" ry="4" fill="rgb(255,0,0)" stroke="rgb(0,0,0)"/>');
+  });
+
+  it("falls back to the diagram-wide default cloud size for a non-positive width override", () => {
+    // Verified against the original: `width = 0` (unlike a real
+    // positive override) falls back to the default, same as `width`
+    // being unset - Python's `n or fallback` falls back for any falsy
+    // n, not just None (see metrics.ts's effectiveSize()).
+    const output = svg('diagram { A [shape = cloud, width = 0, label = "Hi"]; }');
+    expect(output).toContain(
+      '<path d="M 84 56 A20,8 0 0 1 104 48 A20,6 0 0 1 154 48 A20,8 0 0 1 174 56 A20,8 0 0 1 174 72 ' +
+        'A20,20 0 0 1 144 72 A20,20 0 0 1 114 72 A20,20 0 0 1 84 72 A20,8 0 0 1 84 56" ' +
+        'fill="rgb(255,255,255)" stroke="rgb(0,0,0)"/>',
+    );
+  });
 });

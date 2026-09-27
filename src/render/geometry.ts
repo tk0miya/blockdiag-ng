@@ -1,9 +1,9 @@
 // Ported from `blockdiag.utils.Box`/`Size` (vendor/blockdiag/src/blockdiag/
 // utils/__init__.py): pixel-space rectangles and dimensions, as opposed to
 // the grid-space `XY` in the model (src/model/elements.ts) that layout
-// works in. Only `width`/`height`/`center`/`top`/`right`/`bottom`/`left`
-// are needed so far - later rendering steps add the rest of `Box`'s
-// corner/edge accessors as they need them.
+// works in. Only `width`/`height`/`center`/`top`/`right`/`bottom`/`left`/
+// the four corners are needed so far - later rendering steps add the
+// rest of `Box`'s accessors as they need them.
 export interface Box {
   readonly x1: number;
   readonly y1: number;
@@ -50,6 +50,23 @@ export function boxBottom(box: Box): Point {
 
 export function boxLeft(box: Box): Point {
   return { x: box.x1, y: box.y1 + Math.floor(boxHeight(box) / 2) };
+}
+
+// Ported from `Box.topleft`/`.topright`/`.bottomleft`/`.bottomright`.
+export function boxTopLeft(box: Box): Point {
+  return { x: box.x1, y: box.y1 };
+}
+
+export function boxTopRight(box: Box): Point {
+  return { x: box.x2, y: box.y1 };
+}
+
+export function boxBottomLeft(box: Box): Point {
+  return { x: box.x1, y: box.y2 };
+}
+
+export function boxBottomRight(box: Box): Point {
+  return { x: box.x2, y: box.y2 };
 }
 
 // Ported from `Box.get_padding_for()`: the offset from `box`'s own

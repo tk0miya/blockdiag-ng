@@ -53,8 +53,12 @@ export function collectAllNodes(group: AnyGroup): DiagramNode[] {
 // in widths)` comprehension) plus `set_node_width()`'s own `0 < width`
 // check: a node's own width/height only grows its column/row when it's a
 // real, positive override - `null` (unset) or a non-positive value both
-// fall back to the diagram-wide default instead.
-function effectiveSize(size: number | null, fallback: number): number {
+// fall back to the diagram-wide default instead. Exported since other
+// shapes (e.g. `cloud`) that also read `node.width`/`node.height`
+// directly need this same "positive override, else fallback" logic -
+// not just plain `??`, which (unlike Python's `or`) wouldn't fall back
+// for a non-positive value.
+export function effectiveSize(size: number | null, fallback: number): number {
   return size !== null && size > 0 ? size : fallback;
 }
 
