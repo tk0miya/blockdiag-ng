@@ -61,7 +61,10 @@ describe("renderDiagramToSvg", () => {
 
   it("draws nothing for a line-shaped group (its border comes later, once groups render fully)", () => {
     const output = svg("diagram { group G { shape = line; A -> B; } }");
-    expect(output).not.toContain("filter:url(#filter_blur)");
+    // Node shadows (on by default) also use the blur filter, so this
+    // checks specifically for the group's own orange background - not
+    // just the absence of "filter:url(#filter_blur)" anywhere at all.
+    expect(output).not.toContain("rgb(243,152,0)");
   });
 
   it("draws a square node at a fixed size, centered on its cell", () => {
@@ -281,5 +284,74 @@ describe("renderDiagramToSvg", () => {
     // override - same pattern as `database` above.
     const output = svg("diagram { A [shape = flowchart.terminator, height = 100]; }");
     expect(output).toContain("A16,20 0 0 1");
+  });
+
+  describe("node shadows", () => {
+    it("draws a shadow behind a node, on by default, before the node itself", () => {
+      const output = svg('diagram { A [label = "Hi"]; }');
+      const shadowIndex = output.indexOf('x="67" y="46"');
+      const nodeIndex = output.indexOf('x="64" y="40"');
+      expect(shadowIndex).toBeGreaterThan(-1);
+      expect(nodeIndex).toBeGreaterThan(shadowIndex);
+      expect(output).toContain(
+        '<rect x="67" y="46" width="128" height="40" fill="rgb(0,0,0)" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1"/>',
+      );
+    });
+
+    it("draws no shadow at all when shadow_style = none", () => {
+      const output = svg('diagram { shadow_style = none; A [label = "Hi"]; }');
+      expect(output).not.toContain('x="67" y="46"');
+    });
+
+    it("draws a flat, unblurred shadow when shadow_style = solid", () => {
+      const output = svg('diagram { shadow_style = solid; A [label = "Hi"]; }');
+      expect(output).toContain('<rect x="67" y="46" width="128" height="40" fill="rgb(0,0,0)" stroke="rgb(0,0,0)"/>');
+    });
+
+    it("casts no shadow for a node whose own color is literally none", () => {
+      const output = svg('diagram { A [label = "Hi", color = none]; }');
+      expect(output).not.toContain('x="67" y="46"');
+      expect(output).toContain('<rect x="64" y="40" width="128" height="40" fill="none" stroke="rgb(0,0,0)"/>');
+    });
+
+    it("shifts a diamond's whole outline for its shadow, not just its bounding box", () => {
+      const output = svg('diagram { A [shape = diamond, label = "Hi"]; }');
+      expect(output).toContain(
+        '<polygon points="131,38 203,66 131,94 59,66 131,38" fill="rgb(0,0,0)" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1"/>',
+      );
+    });
+
+    it("draws only the box's shadow for mail, not the flap line's", () => {
+      const output = svg('diagram { A [shape = mail, label = "Hi"]; }');
+      expect(output).toContain(
+        '<rect x="67" y="46" width="128" height="40" fill="rgb(0,0,0)" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1"/>',
+      );
+      // Only two paths total (the flap line, split into two segments by
+      // line()'s own point-pair splitting) - no shadow-shifted third or
+      // fourth path for the flap.
+      expect(output.match(/<path/g)).toHaveLength(2);
+    });
+
+    it("draws a rounded-rectangle shadow by rebuilding the same path from a shifted box", () => {
+      const output = svg('diagram { A [shape = roundedbox, label = "Hi"]; }');
+      expect(output).toContain(
+        '<path d="M 75 46 L 187 46 A8,8 0 0 1 195 54 L 195 78 A8,8 0 0 1 187 86 L 75 86 A8,8 0 0 1 67 78 L 67 54 A8,8 0 0 1 75 46" fill="rgb(0,0,0)" stroke="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1"/>',
+      );
+    });
+
+    it("shifts an actor's body and head independently, with no outline on the body's shadow but the node's own linecolor on the head's", () => {
+      // Verified against the original: the body's shadow polygon omits
+      // `outline` entirely (so no `stroke` attribute at all), while the
+      // head's shadow ellipse keeps `node.linecolor` (not the shadow
+      // color) as its own outline - the only shape whose shadow branch
+      // draws two independently-colored pieces.
+      const output = svg('diagram { A [shape = actor, label = "Hi", linecolor = red]; }');
+      expect(output).toContain(
+        '<polygon points="133,60 133,63 143,63 143,66 133,66 133,69 141,78 137,78 131,72 125,78 121,78 129,69 129,66 119,66 119,63 129,63 129,60" fill="rgb(0,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1"/>',
+      );
+      expect(output).toContain(
+        '<ellipse cx="131" cy="57" rx="4" ry="4" fill="rgb(0,0,0)" stroke="rgb(255,0,0)" style="filter:url(#filter_blur);opacity:0.7;fill-opacity:1"/>',
+      );
+    });
   });
 });

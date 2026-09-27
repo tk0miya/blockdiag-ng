@@ -3,15 +3,19 @@
 // when the node's own color is still the default (see beginpoint.ts's
 // comment on this same swap, and its own documented divergence from
 // tracking the diagram's actual default node color). Label to the
-// right (left-aligned), same layout as `beginpoint`/`minidiamond`.
-// Shadow branch deferred to Step 17, same as box.ts (this shape has no
-// background-image branch to begin with).
+// right (left-aligned), same layout as `beginpoint`/`minidiamond`. Its
+// shadow branch draws only the outer ring, shifted and flat-colored -
+// the inner dot's own drawing is gated by `if not shadow` in the
+// original, so it has no shadow of its own. This shape has no
+// background-image branch to begin with.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
 import type { Box } from "../geometry.js";
 import { boxCenter, boxRight, boxTop } from "../geometry.js";
 import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
+import type { RenderMode } from "../render-mode.js";
+import { SHADOW_COLOR, shiftShadowBox } from "../shadow.js";
 import type { NodeShape } from "../shape-registry.js";
 import type { SvgDocument } from "../svg-document.js";
 
@@ -20,15 +24,21 @@ const WHITE = [255, 255, 255] as const;
 export function renderEndpointNode(
   doc: SvgDocument,
   metrics: DiagramMetrics,
+  node: DiagramNode,
   font: Font,
   fontSize: number,
-  node: DiagramNode,
+  mode: RenderMode,
 ): void {
   const nodeCell = nodeBox(metrics, node);
   const center = boxCenter(nodeCell);
   const r = metrics.cellSize;
-
   const outerBox: Box = { x1: center.x - r, y1: center.y - r, x2: center.x + r, y2: center.y + r };
+
+  if (mode.kind === "shadow") {
+    doc.ellipse(shiftShadowBox(outerBox), { fill: SHADOW_COLOR, outline: SHADOW_COLOR, filter: mode.filter });
+    return;
+  }
+
   doc.ellipse(outerBox, { fill: WHITE, outline: node.linecolor, style: node.style });
 
   const innerR = r / 2;

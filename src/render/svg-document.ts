@@ -25,6 +25,16 @@ function escapeXmlText(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+// Ported from `svg.py`'s module-level `style()`: the CSS behind a
+// group's background blur (`"blur"`) or a node's shadow blur
+// (`"transp-blur"` - the same blur, plus some transparency so an
+// overlapping shadow doesn't double up solid black).
+function filterCss(filter: "blur" | "transp-blur" | undefined): string {
+  if (filter === "blur") return "filter:url(#filter_blur)";
+  if (filter === "transp-blur") return "filter:url(#filter_blur);opacity:0.7;fill-opacity:1";
+  return "";
+}
+
 // Ported from `svg.py`'s module-level `dasharray()`: a `style`
 // attribute's dash pattern, scaled by the line's own thickness (each
 // backend does this scaling itself, independently - see model/
@@ -55,22 +65,21 @@ export class SvgDocument {
   private readonly elements: string[] = [];
 
   // Ported from `rectangle()`. `filter: "blur"` is the soft, blurred
-  // backdrop the original always draws behind a box-shaped group (not to
-  // be confused with a node's own drop shadow, which is a separate,
-  // `shadow_style`-controlled thing added once node shadows are, in
-  // Step 17).
+  // backdrop the original always draws behind a box-shaped group;
+  // `"transp-blur"` is the same blur (plus some transparency) behind a
+  // node's own shadow instead (`shadow_style`-controlled - see
+  // shadow.ts).
   rectangle(
     box: Box,
     options: {
       readonly fill?: Color;
       readonly outline?: Color;
       readonly style?: LineStyle | null;
-      readonly filter?: "blur";
+      readonly filter?: "blur" | "transp-blur";
     },
   ): void {
     const dasharray = svgDasharray(options.style ?? null, null);
-    const filterStyle = options.filter === "blur" ? `filter:url(#filter_blur)` : "";
-    const style = [filterStyle].filter((s) => s !== "").join(";");
+    const style = filterCss(options.filter);
     this.elements.push(
       `<rect x="${box.x1}" y="${box.y1}" width="${boxWidth(box)}" height="${boxHeight(box)}"` +
         ` fill="${cssColor(options.fill ?? "none")}"` +
@@ -89,6 +98,7 @@ export class SvgDocument {
       readonly outline?: Color;
       readonly style?: LineStyle | null;
       readonly thick?: number | null;
+      readonly filter?: "blur" | "transp-blur";
     },
   ): void {
     const rx = boxWidth(box) / 2;
@@ -96,10 +106,12 @@ export class SvgDocument {
     const cx = box.x1 + rx;
     const cy = box.y1 + ry;
     const dasharray = svgDasharray(options.style ?? null, options.thick ?? null);
+    const style = filterCss(options.filter);
     this.elements.push(
       `<ellipse cx="${cx}" cy="${cy}" rx="${rx}" ry="${ry}" fill="${cssColor(options.fill ?? "none")}"` +
         (options.outline !== undefined ? ` stroke="${cssColor(options.outline)}"` : "") +
         (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
+        (style !== "" ? ` style="${style}"` : "") +
         `/>`,
     );
   }
@@ -114,14 +126,17 @@ export class SvgDocument {
       readonly outline?: Color;
       readonly style?: LineStyle | null;
       readonly thick?: number | null;
+      readonly filter?: "blur" | "transp-blur";
     },
   ): void {
     const pointList = points.map((p) => `${Math.trunc(p.x)},${Math.trunc(p.y)}`).join(" ");
     const dasharray = svgDasharray(options.style ?? null, options.thick ?? null);
+    const style = filterCss(options.filter);
     this.elements.push(
       `<polygon points="${pointList}" fill="${cssColor(options.fill ?? "none")}"` +
         (options.outline !== undefined ? ` stroke="${cssColor(options.outline)}"` : "") +
         (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
+        (style !== "" ? ` style="${style}"` : "") +
         `/>`,
     );
   }
@@ -136,13 +151,16 @@ export class SvgDocument {
       readonly outline?: Color;
       readonly style?: LineStyle | null;
       readonly thick?: number | null;
+      readonly filter?: "blur" | "transp-blur";
     },
   ): void {
     const dasharray = svgDasharray(options.style ?? null, options.thick ?? null);
+    const style = filterCss(options.filter);
     this.elements.push(
       `<path d="${d}" fill="${cssColor(options.fill ?? "none")}"` +
         (options.outline !== undefined ? ` stroke="${cssColor(options.outline)}"` : "") +
         (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
+        (style !== "" ? ` style="${style}"` : "") +
         `/>`,
     );
   }
@@ -226,10 +244,21 @@ export class SvgDocument {
   // read the tree back before it's complete. The original also embeds
   // the diagram source as a `<desc>`; left out until a later step
   // actually needs it.
+  //
+  // `filter_blur`'s own `x`/`y`/`width`/`height` (objectBoundingBox
+  // fractions, matching svg.py's `filter(-0.07875, -0.252, 1.1575,
+  // 1.504, id='filter_blur')`) are load-bearing, not decorative: without
+  // them SVG defaults to a `-10%..110%` region sized off the *filtered
+  // element's own* bounding box, which for a flat/wide shape (a node's
+  // shadow path, far shorter than it is wide) leaves nowhere near enough
+  // vertical margin for a `stdDeviation=4.2` blur to fade into - it hard-
+  // clips into a flat edge instead. The original's larger, asymmetric
+  // margin (particularly `y`/`height`) avoids that.
   toString(size: Size): string {
     return (
       `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="${size.width}" height="${size.height}">` +
-      `<defs><filter id="filter_blur"><feGaussianBlur stdDeviation="4.2"/></filter></defs>` +
+      `<defs><filter id="filter_blur" x="-0.07875" y="-0.252" width="1.1575" height="1.504">` +
+      `<feGaussianBlur stdDeviation="4.2"/></filter></defs>` +
       `<title>blockdiag</title>` +
       this.elements.join("") +
       `</svg>`

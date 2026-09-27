@@ -1,21 +1,24 @@
 // Ported from `noderenderer/flowchart/input.py`: a parallelogram,
-// slanted inward at the top. Shadow/background-image branches deferred
-// to Step 17, same as box.ts.
+// slanted inward at the top. Plus its shadow branch. A background
+// image is deferred to Step 17c, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
 import type { Box } from "../geometry.js";
 import { boxBottomLeft, boxBottomRight, boxTopLeft, boxTopRight } from "../geometry.js";
 import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
+import type { RenderMode } from "../render-mode.js";
+import { SHADOW_COLOR, shiftShadowPoints } from "../shadow.js";
 import type { NodeShape } from "../shape-registry.js";
 import type { SvgDocument } from "../svg-document.js";
 
 export function renderFlowchartInputNode(
   doc: SvgDocument,
   metrics: DiagramMetrics,
+  node: DiagramNode,
   font: Font,
   fontSize: number,
-  node: DiagramNode,
+  mode: RenderMode,
 ): void {
   const box = nodeBox(metrics, node);
   const r = metrics.cellSize * 3;
@@ -31,6 +34,12 @@ export function renderFlowchartInputNode(
     bottomLeft,
     { x: topLeft.x + r, y: topLeft.y },
   ];
+
+  if (mode.kind === "shadow") {
+    doc.polygon(shiftShadowPoints(shape), { fill: SHADOW_COLOR, outline: SHADOW_COLOR, filter: mode.filter });
+    return;
+  }
+
   doc.polygon(shape, { fill: node.color, outline: node.linecolor, style: node.style });
 
   if (node.label !== null) {

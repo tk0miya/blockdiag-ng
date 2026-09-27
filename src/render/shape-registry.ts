@@ -26,6 +26,7 @@ import type { DiagramNode } from "../model/elements.js";
 import type { Font } from "./font-metrics.js";
 import type { Box, Point } from "./geometry.js";
 import type { DiagramMetrics } from "./metrics.js";
+import type { RenderMode } from "./render-mode.js";
 import type { SvgDocument } from "./svg-document.js";
 
 export interface Connectors {
@@ -38,9 +39,10 @@ export interface Connectors {
 export type NodeRenderer = (
   doc: SvgDocument,
   metrics: DiagramMetrics,
+  node: DiagramNode,
   font: Font,
   fontSize: number,
-  node: DiagramNode,
+  mode: RenderMode,
 ) => void;
 
 export type ConnectorsGetter = (metrics: DiagramMetrics, node: DiagramNode, font: Font, fontSize: number) => Connectors;
