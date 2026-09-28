@@ -76,7 +76,9 @@ export function renderCloudNode(
 }
 
 // `getConnectors` is `null` - cloud inherits the plain box default,
-// same as box.ts (cloud.py never overrides `self.connectors`). `getTextBox`
-// stays `null` for now too - cloud.py's own textbox (the inset box
-// computed inline above) is added once connectors.ts exists (Step 18a).
+// same as box.ts (cloud.py never overrides `self.connectors`).
+// `getTextBox` is `null` too: cloud.py overrides `self.textbox`
+// unconditionally (the inset box computed inline above), so - like most
+// shapes other than box/roundedbox/textbox/note - it never narrows for
+// an `icon`.
 export const cloudShape: NodeShape = { render: renderCloudNode, getConnectors: null, getTextBox: null };

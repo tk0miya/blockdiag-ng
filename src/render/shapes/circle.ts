@@ -12,7 +12,7 @@ import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
 import type { RenderMode } from "../render-mode.js";
 import { SHADOW_COLOR, shiftShadowBox } from "../shadow.js";
-import type { NodeShape } from "../shape-registry.js";
+import type { Connectors, NodeShape } from "../shape-registry.js";
 import type { SvgDocument } from "../svg-document.js";
 
 export function renderCircleNode(
@@ -45,7 +45,23 @@ export function renderCircleNode(
   }
 }
 
-// `getConnectors`/`getTextBox` are `null` for now - circle.py's own
-// connectors (a circle enclosing this box) and textbox (the same
-// circle) are added once connectors.ts exists (Step 18a).
-export const circleShape: NodeShape = { render: renderCircleNode, getConnectors: null, getTextBox: null };
+// Ported from `circle.py`: a circle enclosing the node's own box
+// (radius grows with the box's own possibly-custom width/height, unlike
+// `square`'s connectors - see square.ts). Connectors sit at that
+// circle's own top/right/bottom/left, same as its drawn outline.
+function circleConnectors(metrics: DiagramMetrics, node: DiagramNode): Connectors {
+  const box = nodeBox(metrics, node);
+  const r = Math.floor(Math.min(boxWidth(box), boxHeight(box)) / 2) + Math.floor(metrics.cellSize / 2);
+  const center = boxCenter(box);
+  return {
+    top: { x: center.x, y: center.y - r },
+    right: { x: center.x + r, y: center.y },
+    bottom: { x: center.x, y: center.y + r },
+    left: { x: center.x - r, y: center.y },
+  };
+}
+
+// `getTextBox` is `null` for now - circle.py's own textbox (the same
+// circle `getConnectors` describes) is added once icon.ts's textbox
+// resolution covers shapes beyond the plain box default.
+export const circleShape: NodeShape = { render: renderCircleNode, getConnectors: circleConnectors, getTextBox: null };

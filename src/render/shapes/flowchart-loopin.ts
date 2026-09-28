@@ -53,11 +53,9 @@ export function renderFlowchartLoopinNode(
 
 // `getConnectors` is `null` - `loopin.py` never overrides
 // `self.connectors`, so it inherits the plain box default, same as
-// box.ts. `getTextBox` stays `null` too: `loopin.py` does override
+// box.ts. `getTextBox` is `null` too: `loopin.py` overrides
 // `self.textbox` unconditionally (narrowed below the top-left notch,
-// above), so it never narrows for an `icon` - icon.ts existing doesn't
-// unblock this. It gets a real getTextBox once connectors.ts exists
-// (Step 18a), at the same time as its own getConnectors.
+// above), so it never narrows for an `icon`.
 export const flowchartLoopinShape: NodeShape = {
   render: renderFlowchartLoopinNode,
   getConnectors: null,

@@ -55,11 +55,11 @@ export function renderBoxNode(
   }
 }
 
-// `getConnectors` is still `null` - box doesn't customize it, so it
-// falls back to the plain box default, added once connectors.ts exists
-// (Step 18a). `getTextBox` narrows for an `icon` via `textBoxFor()` (see
-// icon.ts) - one of the few shapes that doesn't already override its
-// own textbox unconditionally.
+// `getConnectors` is `null` - box.py never overrides `self.connectors`,
+// so it falls back to the plain box default (connectors.ts's
+// `defaultConnectors()`). `getTextBox` narrows for an `icon` via
+// `textBoxFor()` (see icon.ts) - one of the few shapes that doesn't
+// already override its own textbox unconditionally.
 export const boxShape: NodeShape = {
   render: renderBoxNode,
   getConnectors: null,
