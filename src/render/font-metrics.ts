@@ -9,9 +9,9 @@
 // scaled from font design units to pixels at the given size. That gives
 // the same width to within FreeType's own sub-pixel hinting adjustments
 // (e.g. "Hello World" at 11pt in the bundled VL Gothic: 60.5px here vs.
-// Pillow's 61.0px) - close enough, consistent with this project's
-// general tolerance for exact-pixel differences (see the SVG/SSIM
-// comparison policy).
+// Pillow's 61.0px) - close enough for every test in this project that
+// compares against a value captured from the original, which all treat
+// a sub-pixel difference like this as a pass, not a failure.
 import * as fontkit from "fontkit";
 
 export type Font = fontkit.Font;
