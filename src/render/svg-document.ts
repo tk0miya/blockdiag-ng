@@ -214,11 +214,23 @@ export class SvgDocument {
     }
   }
 
-  // Ported from `text()`. The original also emits `font-family`/
-  // `font-weight`/`font-style` parsed out of the element's `fontfamily`
-  // DSL string (e.g. "serif-bold"); that parsing is deferred to Step 20
-  // ("style attributes"), so every label renders as plain sans-serif
-  // for now.
+  // Ported from `text()`: `font-family`/`font-weight`/`font-style` come
+  // from `font.generic_family`/`.weight`/`.style` in the original - the
+  // resolved `FontInfo` `FontMap.find()` actually returns, not a fresh
+  // parse of the element's own `fontfamily` string. `find()` only ever
+  // returns something other than the single font registered at startup
+  // (via `-f`/`--fontmap`, a font *file* registration this port has no
+  // equivalent of) when a `fontfamily` value's own regulated name
+  // happens to match one of those registrations - otherwise it warns
+  // ("Unknown fontfamily") and falls back to that one registered font's
+  // own family/weight/style regardless of what `fontfamily` asked for
+  // (confirmed against the original: `fontfamily = "serif-bold"` on a
+  // node, or as `default_fontfamily`, changes nothing about its
+  // rendered text at all - see draw-diagram.test.ts). So a `fontfamily`
+  // attribute genuinely has no rendering effect through the DSL alone
+  // without a matching font registration this port doesn't support -
+  // hardcoding the single bundled font's own plain sans-serif/normal/
+  // normal here faithfully matches that, not a deferred gap.
   text(point: Point, textContent: string, font: Font, fontSize: number, options: { readonly fill: Color }): void {
     const width = measureTextWidth(font, textContent, fontSize);
     const x = point.x + width / 2;
