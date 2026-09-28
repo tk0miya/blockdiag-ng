@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parseString } from "../parser/parser.js";
+import { AttributeError } from "./attributes.js";
 import { buildDiagram } from "./tree-builder.js";
 
 // Expected outputs were captured by running the original implementation's
@@ -89,6 +90,35 @@ describe("buildDiagram", () => {
 
   it("throws BuildError when a node is asked to belong to two unrelated groups", () => {
     expect(() => build("diagram { group A { N; } group B { N; } }")).toThrowError(/could not belong to two groups/);
+  });
+
+  it("points a builder-level attribute error at the offending attribute's source position", () => {
+    // "shape" is the second attribute on the second line - its AttributeError
+    // should carry that position, not the position of "A" or of "label".
+    const source = ["diagram {", '  A [label = "ok", shape = hexagon];', "}"].join("\n");
+    try {
+      build(source);
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(AttributeError);
+      const attributeError = error as AttributeError;
+      expect(attributeError.position).toEqual({ line: 2, column: 20 });
+      expect(attributeError.message).toContain("at 2:20");
+    }
+  });
+
+  it("attributes a class-body error to the offending attribute inside the class, not to the `class` reference", () => {
+    const source = ["diagram {", "  class bogus [shape = hexagon];", "  A [class = bogus];", "}"].join("\n");
+    try {
+      build(source);
+      expect.unreachable();
+    } catch (error) {
+      expect(error).toBeInstanceOf(AttributeError);
+      const attributeError = error as AttributeError;
+      // Points at "shape = hexagon" inside the class body (line 2), not at
+      // "class = bogus" where it's actually applied (line 3).
+      expect(attributeError.position?.line).toBe(2);
+    }
   });
 
   it("nests a node into its own group via a `group` attribute, preserving its other attributes", () => {
