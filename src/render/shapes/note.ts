@@ -1,11 +1,13 @@
 // Ported from `noderenderer/note.py`: a box with its top-right corner
 // folded down and inward, like a sticky note. Plus its shadow branch -
 // the fold-crease line is skipped for shadow, same as the flap in
-// mail.ts. A background image is deferred to Step 17c, same as box.ts.
+// mail.ts. `icon` narrows the label the same way as box.ts (see
+// icon.ts); a background image is deferred to a later step.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
 import type { Point } from "../geometry.js";
 import { boxBottomLeft, boxBottomRight, boxTopLeft, boxTopRight } from "../geometry.js";
+import { textBoxFor } from "../icon.js";
 import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
 import type { RenderMode } from "../render-mode.js";
@@ -44,13 +46,20 @@ export function renderNoteNode(
   });
 
   if (node.label !== null) {
-    doc.textarea(box, node.label, font, fontSize, { fill: node.textcolor, halign: "center" });
+    doc.textarea(textBoxFor(metrics, node, box), node.label, font, fontSize, {
+      fill: node.textcolor,
+      halign: "center",
+    });
   }
 }
 
-// `getConnectors` is `null` - note.py never overrides `self.connectors`
-// or `self.textbox`, so both inherit the plain box default, same as
-// box.ts. `getTextBox` stays `null` for now too - note is one of the
-// shapes whose own label narrows for an icon (see icon.ts), so it gets
-// a real getTextBox once icon.ts exists (Step 17c).
-export const noteShape: NodeShape = { render: renderNoteNode, getConnectors: null, getTextBox: null };
+// `getConnectors` is `null` - note.py never overrides `self.connectors`,
+// so it inherits the plain box default, same as box.ts. `getTextBox`
+// narrows for an `icon` via `textBoxFor()` (see icon.ts) - note is one
+// of the shapes that doesn't already override its own textbox
+// unconditionally.
+export const noteShape: NodeShape = {
+  render: renderNoteNode,
+  getConnectors: null,
+  getTextBox: (metrics, node) => textBoxFor(metrics, node, nodeBox(metrics, node)),
+};

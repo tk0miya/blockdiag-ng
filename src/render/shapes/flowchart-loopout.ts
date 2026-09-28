@@ -1,7 +1,7 @@
 // Ported from `noderenderer/flowchart/loopout.py`: a box with its
 // bottom-right corner notched inward - the mirror image of `loopin`'s
 // notch. Plus its shadow branch. A background image is deferred to
-// Step 17c, same as box.ts.
+// a later step, same as box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
 import type { Box } from "../geometry.js";
@@ -54,10 +54,11 @@ export function renderFlowchartLoopoutNode(
 
 // `getConnectors` is `null` - `loopout.py` never overrides
 // `self.connectors`, so it inherits the plain box default, same as
-// box.ts. `getTextBox` is `null` too for now - `loopout.py` does
-// override `self.textbox` (narrowed above the bottom-right notch,
-// above), but that's only wired up once connectors.ts/icon.ts exist
-// (Step 17c/18a).
+// box.ts. `getTextBox` stays `null` too: `loopout.py` does override
+// `self.textbox` unconditionally (narrowed above the bottom-right
+// notch, above), so it never narrows for an `icon` - icon.ts existing
+// doesn't unblock this. It gets a real getTextBox once connectors.ts
+// exists (Step 18a), at the same time as its own getConnectors.
 export const flowchartLoopoutShape: NodeShape = {
   render: renderFlowchartLoopoutNode,
   getConnectors: null,

@@ -4,7 +4,7 @@
 // for the shadow branch - just the outline, shifted). Like
 // `roundedbox`/`cloud`, the original's alternate raster
 // `render_shape`/`render_shape_background` is out of scope for an
-// SVG-only port. A background image is deferred to Step 17c, same as
+// SVG-only port. A background image is deferred to a later step, same as
 // box.ts.
 import type { DiagramNode } from "../../model/elements.js";
 import type { Font } from "../font-metrics.js";
@@ -71,10 +71,12 @@ export function renderFlowchartDatabaseNode(
 
 // `getConnectors` is `null` - `database.py` never overrides
 // `self.connectors`, so it inherits the plain box default, same as
-// box.ts. `getTextBox` is `null` too for now - `database.py` does
-// override `self.textbox` (the inset box between the cap and the
-// bottom edge, above), but that's only wired up once connectors.ts/
-// icon.ts exist (Step 17c/18a).
+// box.ts. `getTextBox` stays `null` too: `database.py` does override
+// `self.textbox` unconditionally (the inset box between the cap and
+// the bottom edge, above), so it never narrows for an `icon` - icon.ts
+// existing doesn't unblock this. It gets a real getTextBox once
+// connectors.ts exists (Step 18a), at the same time as its own
+// getConnectors.
 export const flowchartDatabaseShape: NodeShape = {
   render: renderFlowchartDatabaseNode,
   getConnectors: null,
