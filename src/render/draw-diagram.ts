@@ -2,11 +2,10 @@
 // the entry point tying a laid-out `Diagram` to an SVG document. Covers
 // background skeleton (`_draw_background()`'s group backgrounds and node
 // shadows) plus node rendering (`_draw_elements()`'s node loop,
-// `DiagramDraw.node()`) for the shapes ported so far. Edges, group
-// borders/labels, and a `background` image are added in later steps.
-// Dispatching a node to its shape's renderer (ported from
-// `noderenderer.get(shape)`) lives in shape-registry.ts/shapes/index.ts
-// rather than here.
+// `DiagramDraw.node()`) for the shapes ported so far. Edges and group
+// borders/labels are added in later steps. Dispatching a node to its
+// shape's renderer (ported from `noderenderer.get(shape)`) lives in
+// shape-registry.ts/shapes/index.ts rather than here.
 import type { AnyGroup, Diagram, NodeGroup } from "../model/elements.js";
 import type { Font } from "./font-metrics.js";
 import { drawIcon } from "./icon.js";
