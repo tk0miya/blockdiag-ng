@@ -84,15 +84,17 @@ export class SvgDocument {
       readonly fill?: Color;
       readonly outline?: Color;
       readonly style?: LineStyle | null;
+      readonly thick?: number | null;
       readonly filter?: "blur" | "transp-blur";
     },
   ): void {
-    const dasharray = svgDasharray(options.style ?? null, null);
+    const dasharray = svgDasharray(options.style ?? null, options.thick ?? null);
     const style = filterCss(options.filter);
     this.elements.push(
       `<rect x="${box.x1}" y="${box.y1}" width="${boxWidth(box)}" height="${boxHeight(box)}"` +
         ` fill="${cssColor(options.fill ?? "none")}"` +
         (options.outline !== undefined ? ` stroke="${cssColor(options.outline)}"` : "") +
+        (options.thick != null ? ` stroke-width="${options.thick}"` : "") +
         (dasharray !== null ? ` stroke-dasharray="${dasharray}"` : "") +
         (style !== "" ? ` style="${style}"` : "") +
         `/>`,
