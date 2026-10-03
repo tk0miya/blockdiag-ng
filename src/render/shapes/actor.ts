@@ -19,7 +19,7 @@ import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
 import type { RenderMode } from "../render-mode.js";
 import { SHADOW_COLOR, shiftShadowBox, shiftShadowPoints } from "../shadow.js";
-import type { NodeShape } from "../shape-registry.js";
+import type { Connectors, NodeShape } from "../shape-registry.js";
 import type { SvgDocument } from "../svg-document.js";
 import { foldText } from "../text-folder.js";
 
@@ -30,13 +30,37 @@ import { foldText } from "../text-folder.js";
 // measurement `measureTextHeight()` alone gives. Only `actor` needs
 // this - everywhere else measures a label against its own real,
 // already-bounded textbox instead of pre-measuring it in isolation.
+// Rounded to a whole pixel, matching Pillow's own `textsize()` (which
+// this is ported from) always returning an integer - since this value
+// feeds straight into node geometry (this shape's own textbox, and
+// `actorConnectors()` below), an unrounded float would leak as literal
+// float noise into rendered/queried coordinates instead of just being a
+// harmless sub-pixel measurement difference.
 function labelHeight(font: Font, label: string, fontSize: number): number {
   const measure = (text: string) => ({
     width: measureTextWidth(font, text, fontSize),
     height: measureTextHeight(font, text, fontSize),
   });
   const unbounded: Box = { x1: 0, y1: 0, x2: 65535, y2: 65535 };
-  return boxHeight(foldText(unbounded, label, measure).outlineBox);
+  return Math.round(boxHeight(foldText(unbounded, label, measure).outlineBox));
+}
+
+// Shared with actorConnectors() below: an edge attaches to this same
+// label-height-dependent radius/center, not just the shape's own
+// on-screen drawing - so this is exported rather than re-derived.
+export function actorGeometry(
+  metrics: DiagramMetrics,
+  node: DiagramNode,
+  font: Font,
+  fontSize: number,
+): { center: Point; radius: number; textHeight: number } {
+  const box = nodeBox(metrics, node);
+  const hasLabel = node.label !== null && node.label !== "";
+  const textHeight = hasLabel ? labelHeight(font, node.label as string, fontSize) : 0;
+  const shortside = hasLabel
+    ? Math.min(boxWidth(box), boxHeight(box) - textHeight)
+    : Math.min(boxWidth(box), boxHeight(box));
+  return { center: boxCenter(box), radius: Math.floor(shortside / 8), textHeight };
 }
 
 function headPart(center: Point, radius: number): Box {
@@ -89,13 +113,7 @@ export function renderActorNode(
   mode: RenderMode,
 ): void {
   const box = nodeBox(metrics, node);
-  const hasLabel = node.label !== null && node.label !== "";
-  const textHeight = hasLabel ? labelHeight(font, node.label as string, fontSize) : 0;
-  const shortside = hasLabel
-    ? Math.min(boxWidth(box), boxHeight(box) - textHeight)
-    : Math.min(boxWidth(box), boxHeight(box));
-  const radius = Math.floor(shortside / 8);
-  const center = boxCenter(box);
+  const { center, radius, textHeight } = actorGeometry(metrics, node, font, fontSize);
 
   const body = bodyPart(center, radius);
   const head = headPart(center, radius);
@@ -124,8 +142,20 @@ export function renderActorNode(
   }
 }
 
-// `getConnectors`/`getTextBox` are `null` for now - actor.py's own
-// connectors (label-height-dependent points around the figure) and
-// textbox (below the figure, computed inline above) are added once
-// connectors.ts exists (Step 18a).
-export const actorShape: NodeShape = { render: renderActorNode, getConnectors: null, getTextBox: null };
+// Ported from `actor.py`: identical geometry to the label-height-
+// dependent radius/center `actorGeometry()` (above) computes for the
+// shape's own on-screen drawing.
+function actorConnectors(metrics: DiagramMetrics, node: DiagramNode, font: Font, fontSize: number): Connectors {
+  const { center, radius: r, textHeight } = actorGeometry(metrics, node, font, fontSize);
+  return {
+    top: { x: center.x, y: center.y - Math.floor((r * 9) / 2) },
+    right: { x: center.x + r * 4, y: center.y },
+    bottom: { x: center.x, y: center.y + r * 4 + textHeight },
+    left: { x: center.x - r * 4, y: center.y },
+  };
+}
+
+// `getTextBox` is `null` for now - actor.py's own textbox (below the
+// figure, computed inline in renderActorNode()) is added once icon.ts's
+// textbox resolution covers shapes beyond the plain box default.
+export const actorShape: NodeShape = { render: renderActorNode, getConnectors: actorConnectors, getTextBox: null };

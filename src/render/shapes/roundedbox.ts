@@ -66,9 +66,10 @@ export function renderRoundedboxNode(
   }
 }
 
-// `getConnectors` is still `null` - roundedbox doesn't customize it, so
-// it falls back to the plain box default, added once connectors.ts
-// exists (Step 18a). `getTextBox` narrows for an `icon`, same as box.ts.
+// `getConnectors` is `null` - roundedbox.py never overrides
+// `self.connectors`, so it falls back to the plain box default
+// (connectors.ts's `defaultConnectors()`). `getTextBox` narrows for an
+// `icon`, same as box.ts.
 export const roundedboxShape: NodeShape = {
   render: renderRoundedboxNode,
   getConnectors: null,

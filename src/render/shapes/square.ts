@@ -14,7 +14,7 @@ import type { DiagramMetrics } from "../metrics.js";
 import { nodeBox } from "../metrics.js";
 import type { RenderMode } from "../render-mode.js";
 import { SHADOW_COLOR, shiftShadowBox } from "../shadow.js";
-import type { NodeShape } from "../shape-registry.js";
+import type { Connectors, NodeShape } from "../shape-registry.js";
 import type { SvgDocument } from "../svg-document.js";
 
 export function renderSquareNode(
@@ -46,8 +46,21 @@ export function renderSquareNode(
   }
 }
 
-// `getConnectors`/`getTextBox` are `null` for now - square's own
-// connectors do differ from the plain box default (its drawn outline
-// extends past the node's own cell), but that's added once
-// connectors.ts exists (Step 18a).
-export const squareShape: NodeShape = { render: renderSquareNode, getConnectors: null, getTextBox: null };
+// Ported from `square.py`: always the diagram-wide default size,
+// regardless of the node's own (possibly custom) width/height - unlike
+// `circle`'s connectors (circle.ts), which grow with the box itself.
+function squareConnectors(metrics: DiagramMetrics, node: DiagramNode): Connectors {
+  const r = Math.floor(Math.min(metrics.nodeWidth, metrics.nodeHeight) / 2) + Math.floor(metrics.cellSize / 2);
+  const center = boxCenter(nodeBox(metrics, node));
+  return {
+    top: { x: center.x, y: center.y - r },
+    right: { x: center.x + r, y: center.y },
+    bottom: { x: center.x, y: center.y + r },
+    left: { x: center.x - r, y: center.y },
+  };
+}
+
+// `getTextBox` is `null` for now - square.py's own textbox (the same
+// square `getConnectors` describes) is added once icon.ts's textbox
+// resolution covers shapes beyond the plain box default.
+export const squareShape: NodeShape = { render: renderSquareNode, getConnectors: squareConnectors, getTextBox: null };

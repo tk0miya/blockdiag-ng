@@ -9,10 +9,10 @@
 // `node` on every call rather than caching it once in a constructor.
 // They're required fields (not optional) so a shape must say explicitly
 // whether it customizes them or falls back to the plain box default
-// (`null`). `getConnectors` stays `null` for every shape until
-// connectors.ts exists (Step 18a); `getTextBox` already has a real
-// implementation for the shapes that narrow for an `icon` (icon.ts,
-// Step 17c) - see each shape's own file for which one it is.
+// (`null`) - see each shape's own file for which one it is. `null`
+// resolves to that default via connectors.ts's `defaultConnectors()`
+// (for `getConnectors`) or, for the shapes that narrow for an `icon`,
+// icon.ts's `textBoxFor()` (for `getTextBox`).
 // See shapes/index.ts for the current roster of registered shapes.
 //
 // Unlike the original, which resolves shapes at runtime via
@@ -78,4 +78,12 @@ function shapeFor(name: string): NodeShape {
 
 export function rendererFor(name: string): NodeRenderer {
   return shapeFor(name).render;
+}
+
+// `null` (the plain box default) is a valid, common result here - most
+// shapes don't customize connectors/textbox - so unlike `rendererFor()`
+// this doesn't itself supply a fallback; the caller (connectors.ts,
+// icon.ts's eventual textbox resolution) decides what `null` means.
+export function connectorsGetterFor(name: string): ConnectorsGetter | null {
+  return shapeFor(name).getConnectors;
 }

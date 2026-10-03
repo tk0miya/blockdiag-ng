@@ -54,6 +54,7 @@ export function renderMailNode(
 
 // `getConnectors` is `null` - mail inherits the plain box default, same
 // as box.ts (mail.py never overrides `self.connectors`). `getTextBox`
-// stays `null` for now too - mail.py's own textbox (below the flap,
-// computed inline above) is added once connectors.ts exists (Step 18a).
+// is `null` too: mail.py overrides `self.textbox` unconditionally
+// (below the flap, computed inline above), so - like most shapes other
+// than box/roundedbox/textbox/note - it never narrows for an `icon`.
 export const mailShape: NodeShape = { render: renderMailNode, getConnectors: null, getTextBox: null };
