@@ -71,12 +71,9 @@ export function renderFlowchartDatabaseNode(
 
 // `getConnectors` is `null` - `database.py` never overrides
 // `self.connectors`, so it inherits the plain box default, same as
-// box.ts. `getTextBox` stays `null` too: `database.py` does override
+// box.ts. `getTextBox` is `null` too: `database.py` overrides
 // `self.textbox` unconditionally (the inset box between the cap and
-// the bottom edge, above), so it never narrows for an `icon` - icon.ts
-// existing doesn't unblock this. It gets a real getTextBox once
-// connectors.ts exists (Step 18a), at the same time as its own
-// getConnectors.
+// the bottom edge, above), so it never narrows for an `icon`.
 export const flowchartDatabaseShape: NodeShape = {
   render: renderFlowchartDatabaseNode,
   getConnectors: null,

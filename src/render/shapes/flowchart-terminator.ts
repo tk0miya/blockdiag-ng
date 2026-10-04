@@ -56,11 +56,9 @@ export function renderFlowchartTerminatorNode(
 
 // `getConnectors` is `null` - `terminator.py` never overrides
 // `self.connectors`, so it inherits the plain box default, same as
-// box.ts. `getTextBox` stays `null` too: `terminator.py` does override
+// box.ts. `getTextBox` is `null` too: `terminator.py` overrides
 // `self.textbox` unconditionally (the inset box between the rounded
-// ends, above), so it never narrows for an `icon` - icon.ts existing
-// doesn't unblock this. It gets a real getTextBox once connectors.ts
-// exists (Step 18a), at the same time as its own getConnectors.
+// ends, above), so it never narrows for an `icon`.
 export const flowchartTerminatorShape: NodeShape = {
   render: renderFlowchartTerminatorNode,
   getConnectors: null,

@@ -48,11 +48,11 @@ export function renderEllipseNode(
   }
 }
 
-// `getConnectors` is `null` - ellipse inherits the plain box default,
-// same as box.ts. `getTextBox` stays `null` too: `ellipse.py` always
-// overrides `self.textbox` unconditionally (its own inset rectangle,
-// computed inline above), so unlike box/roundedbox/textbox/note it
-// never narrows for an `icon` - icon.ts existing doesn't unblock this.
-// It gets a real getTextBox once connectors.ts exists (Step 18a), at
-// the same time as its own getConnectors.
+// `getConnectors` is `null` - ellipse.py never overrides
+// `self.connectors`, so it inherits the plain box default, same as
+// box.ts (even though its own drawn outline sits inside that box).
+// `getTextBox` is `null` too: `ellipse.py` always overrides
+// `self.textbox` unconditionally (its own inset rectangle, computed
+// inline above), so unlike box/roundedbox/textbox/note it never narrows
+// for an `icon`.
 export const ellipseShape: NodeShape = { render: renderEllipseNode, getConnectors: null, getTextBox: null };

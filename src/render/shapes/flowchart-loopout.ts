@@ -54,11 +54,9 @@ export function renderFlowchartLoopoutNode(
 
 // `getConnectors` is `null` - `loopout.py` never overrides
 // `self.connectors`, so it inherits the plain box default, same as
-// box.ts. `getTextBox` stays `null` too: `loopout.py` does override
+// box.ts. `getTextBox` is `null` too: `loopout.py` overrides
 // `self.textbox` unconditionally (narrowed above the bottom-right
-// notch, above), so it never narrows for an `icon` - icon.ts existing
-// doesn't unblock this. It gets a real getTextBox once connectors.ts
-// exists (Step 18a), at the same time as its own getConnectors.
+// notch, above), so it never narrows for an `icon`.
 export const flowchartLoopoutShape: NodeShape = {
   render: renderFlowchartLoopoutNode,
   getConnectors: null,

@@ -18,6 +18,7 @@ import type { RenderMode } from "../render-mode.js";
 import { SHADOW_COLOR, shiftShadowBox } from "../shadow.js";
 import type { NodeShape } from "../shape-registry.js";
 import type { SvgDocument } from "../svg-document.js";
+import { fixedRadiusMarkerConnectors } from "./minidiamond.js";
 
 const WHITE = [255, 255, 255] as const;
 
@@ -55,8 +56,11 @@ export function renderEndpointNode(
   }
 }
 
-// `getConnectors`/`getTextBox` are `null` for now - endpoint.py's own
-// fixed-radius connectors (shared with beginpoint/minidiamond) and
-// textbox (computed inline above) are added once connectors.ts exists
-// (Step 18a).
-export const endpointShape: NodeShape = { render: renderEndpointNode, getConnectors: null, getTextBox: null };
+// `getTextBox` is `null` for now - endpoint.py's own textbox (computed
+// inline above) is added once icon.ts's textbox resolution covers
+// shapes beyond the plain box default.
+export const endpointShape: NodeShape = {
+  render: renderEndpointNode,
+  getConnectors: fixedRadiusMarkerConnectors,
+  getTextBox: null,
+};
